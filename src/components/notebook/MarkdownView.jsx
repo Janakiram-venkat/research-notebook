@@ -11,6 +11,19 @@ import { wikiLinkRegex, wikiLinkParts, CALLOUT_TYPES } from '../../lib/notebook/
 import MathText from '../MathText.jsx'
 import { MathContent } from '../RichMathText.jsx'
 
+// Link and image targets come from note text, which can arrive via an imported
+// backup, so only known-safe schemes are allowed. Anything else (javascript:,
+// vbscript:, data: HTML) becomes an inert "#". Images may also be data:image/
+// (embedded uploads), but never SVG-as-HTML via other data: types.
+const SAFE_LINK = /^(https?:|mailto:|#|\/(?!\/)|\.{0,2}\/)/i
+const SAFE_IMAGE = /^(https?:|blob:|data:image\/(png|jpe?g|gif|webp|avif);|\/(?!\/)|\.{0,2}\/)/i
+function safeUrl(url, image = false) {
+  // Browsers ignore tabs/newlines/control chars inside a scheme ("java\tscript:").
+  // eslint-disable-next-line no-control-regex
+  const u = String(url).trim().replace(/[\u0000- ]+/g, '')
+  return (image ? SAFE_IMAGE : SAFE_LINK).test(u) ? url.trim() : '#'
+}
+
 // ── inline parsing ────────────────────────────────────────────────────────────
 // Find the earliest inline token and render around it, recursively. The image
 // alternative must precede the plain-link one so `![alt](src)` isn't matched as
@@ -82,12 +95,12 @@ function renderInline(text, keyBase) {
     } else if (token.startsWith('![')) {
       const imgMatch = token.match(/^!\[([^\]]*?)\]\(([^)]+?)\)$/)
       nodes.push(
-        <img key={key} src={imgMatch[2]} alt={imgMatch[1] || 'Embedded image'} className="nb-md-img" />
+        <img key={key} src={safeUrl(imgMatch[2], true)} alt={imgMatch[1] || 'Embedded image'} className="nb-md-img" />
       )
     } else {
       const linkMatch = token.match(/^\[([^\]]+?)\]\(([^)]+?)\)$/)
       nodes.push(
-        <a key={key} href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="nb-link">
+        <a key={key} href={safeUrl(linkMatch[2])} target="_blank" rel="noopener noreferrer" className="nb-link">
           <MathContent>{linkMatch[1]}</MathContent>
         </a>
       )
