@@ -1,0 +1,516 @@
+@import "tailwindcss";
+/* Two widths of one family, Sofia Sans, and nothing else for words.
+
+     Sofia Sans Extra Condensed  everything *billed*: headings, nav, numbers,
+                                 lesson names. Hierarchy is carried by size
+                                 alone, like a lineup sheet, so the billing
+                                 face comes in three heavy weights.
+     Sofia Sans                  prose. Condensed capitals are unreadable over
+                                 a 25-minute chapter, so reading gets the
+                                 normal width of the same family.
+
+   Fonts are imported per subset, not per weight. A bare `400.css` declares
+   every script the family covers, and each of those @font-face rules sits in
+   this render-blocking stylesheet whether or not a glyph ever needs it. The
+   content is English plus Greek, and Greek is not optional here: theta, phi
+   and psi are the subject. Adding a subset back is one line; check a glyph
+   actually needs it first. */
+@import "@fontsource/sofia-sans/latin-400.css";
+@import "@fontsource/sofia-sans/latin-ext-400.css";
+@import "@fontsource/sofia-sans/greek-400.css";
+@import "@fontsource/sofia-sans/latin-400-italic.css";
+@import "@fontsource/sofia-sans/greek-400-italic.css";
+@import "@fontsource/sofia-sans/latin-600.css";
+@import "@fontsource/sofia-sans/latin-ext-600.css";
+@import "@fontsource/sofia-sans/greek-600.css";
+@import "@fontsource/sofia-sans/latin-700.css";
+@import "@fontsource/sofia-sans/latin-ext-700.css";
+@import "@fontsource/sofia-sans/greek-700.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-600.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-ext-600.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-700.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-ext-700.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-800.css";
+@import "@fontsource/sofia-sans-extra-condensed/latin-ext-800.css";
+@import "@fontsource/sofia-sans-extra-condensed/greek-800.css";
+
+/* Code stays JetBrains Mono: Plex Mono ships no Greek subset, and this platform writes
+   |psi>, theta and phi inside monospace constantly. Mono is for code, data and
+   measured values only, never a costume for "technical". */
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-ext-400.css";
+@import "@fontsource/jetbrains-mono/greek-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-ext-500.css";
+@import "@fontsource/jetbrains-mono/greek-500.css";
+
+/* ═══════════════════════════════════════════════════════════
+   QAULIUM AI · UNCERTAINTY HUB DESIGN SYSTEM
+   One world: "the Lineup". There is no dark mode and no toggle.
+
+   A festival lineup sheet tells you who matters most from across the room
+   by size alone, and that is the job a learning home has: what is due today
+   is the headliner, everything else is billed smaller in the same face,
+   down to the whole curriculum packed into a justified tail.
+
+   ── Two grounds, one pair of colours ──
+     Billing surfaces   cobalt ground (--bill-ground), white ink. The
+                        Today strip on the overview, and any band whose
+                        job is "what next".
+     Reading surfaces   the inverse: a white sheet, night ink for prose,
+                        cobalt for headings, links and the active state.
+   The same two colours, swapped, so the reader always knows which of the
+   two jobs the page is doing.
+
+   ── Rules of the world ──
+   - Hierarchy is size. No cards, no shadows as structure, no icon tiles,
+     no eyebrow labels above headings, no background doodles. Groups are
+     separated by rules and by size steps.
+   - Active is inverted: the chosen name flips to ground-on-ink.
+   - Done is struck: a finished item takes a rule through it.
+   - Level is a word ("LEVEL 2"), not a hue. Hue still carries meaning
+     inside the labs (gates, measurement), where it is data.
+   - Every number is tabular.
+
+   ── How to add a colour ──
+   Don't. Add a *token*, here, in this one block, and reference it as
+   var(--name). A raw hex in a rule below is a bug: it is a colour nobody can
+   find and nobody can change.
+═══════════════════════════════════════════════════════════ */
+
+/* ── Tailwind v4 Theme Mapping ──
+   Tailwind v4 utility mappings are expressed through standard CSS
+   custom properties so the stylesheet remains compatible with editors
+   and linters. */
+
+:root {
+  color-scheme: light;
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-inverse: var(--text-inverse);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-dim: var(--accent-dim);
+  --color-cta: var(--cta);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-card: var(--bg-card);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-soft-hover: var(--soft-hover);
+
+  /* ── One voice, two jobs ──
+     Every word on the platform is IBM Plex Sans, the way IBM Quantum and the
+     rest of Carbon do it: a heading is not a different typeface, it is the
+     same one at 600 and a larger step. The app used to run three text faces
+     at once — Space Grotesk titling, Inter chrome, IBM Plex Serif prose —
+     which is three products' worth of voice for one product.
+
+       sans     everything   prose, chrome, headings, labels
+       mono     data         measured or entered values, never decoration
+
+     `serif` and `display` are kept as aliases rather than deleted: 57 rules
+     across this file name them, and collapsing those by hand would be a very
+     large diff for no rendered difference. They resolve to the same face, so
+     a rule asking for one is not making a claim any more. Reintroducing a
+     reading face means pointing `--font-serif` back at 'IBM Plex Serif' (its
+     @fontsource import is the only other line needed) -- but then it is a
+     deliberate two-face system again, not an accident. */
+  --font-sans: 'Sofia Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-display: var(--font-sans);
+  /* The billing face: headings, nav, numbers, lesson names on a bill. */
+  --font-bill: 'Sofia Sans Extra Condensed', 'Sofia Sans', 'Arial Narrow', sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+  /* ── Type scale ──
+     A 1.25 (major third) ramp off a 16px body. Stated as tokens so headings
+     stop being invented per-component; step names describe rank, not size. */
+  --text-2xs: 0.6875rem;   /* 11px — eyebrows, figure numbers, dense data */
+  --text-xs:  0.75rem;     /* 12px — captions, table data, meta */
+  --text-sm:  0.875rem;    /* 14px — secondary UI, help text */
+  --text-base: 1rem;       /* 16px — UI default */
+  --text-read: 1.0625rem;  /* 17px — lesson prose. A step above UI text: the
+                              reading column is long-form and wants the size
+                              even now that it is the same face as the chrome */
+  --text-lg:  1.25rem;     /* 20px — sub-headings */
+  --text-xl:  1.5625rem;   /* 25px — section titles */
+  --text-2xl: 1.953rem;    /* 31px — page titles */
+  --text-3xl: 2.441rem;    /* 39px — hero */
+  --text-4xl: 3.052rem;    /* 49px — display hero */
+
+  /* Measure: the width prose is actually comfortable to read at. Roughly
+     66 characters in Plex Sans at --text-read. */
+  --measure: 68ch;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-body: 1.7;   /* UI copy */
+  --leading-read: 1.75;  /* long-form prose wants a little more air */
+
+  --tracking-eyebrow: 0.12em;
+
+  /* ── Surface & Background — paper elevation ladder ──
+     Five steps, and the direction is the point: elevation climbs toward
+     white, so a raised card is the brightest thing on screen and the page
+     floor is the dimmest. A panel *inside* a card recesses instead, which is
+     what --surface-soft and --surface-muted are for. Never pure white on the
+     floor — see the header note. */
+  --bg-primary: #F6F7FB;     /* page floor */
+  --bg-secondary: #EFF2F6;   /* recessed bands, table stripes */
+  --bg-card: #FFFFFF;        /* cards, panels, rails — the top of the ladder */
+  --surface-soft: #F4F6FA;   /* inset panel on a card */
+  --surface-muted: #E9EDF3;  /* deepest inset: gutters, disabled fills */
+  /* Border sits *below* both --bg-card and --surface-soft in luminance by a
+     wide enough margin that an edge stays visible whether it separates a
+     white card from the paper floor or a panel from a card. */
+  --border: #DCE1E9;
+  --border-strong: #C2CAD7;
+  --border-hover: #9DB2D6;
+  --rule: #E6EAF1;
+
+  /* ── Circuit-studio surfaces (canvas / code editor) ── */
+  --surface-canvas: #FCFDFE;      /* circuit canvas + gate punch-out shell */
+  --surface-code: #FFFFFF;        /* code editor */
+  --surface-code-text: #10203A;
+  --surface-overlay: #FFFFFF;     /* dropdowns, tooltips, popovers */
+
+  /* ── Text — navy ink on paper, never #000 on #FFF ──
+     Pure black on pure white overshoots: it is the highest-contrast pair
+     available and reads as harsh well before it reads as legible. The navy
+     still clears 15:1 on a card, and it is the same navy the filled
+     surfaces use, so the page has one ink rather than a text grey and an
+     unrelated dark blue. */
+  --text-primary: #0B0F2A;
+  --text-secondary: #3A4163;
+  /* 5.4:1 on white and 4.5:1 on --surface-muted — clears WCAG AA on every
+     surface in the ladder, which a lighter slate would not. Muted labels
+     cluster on exactly those deep panels. */
+  --text-muted: #565D7E;
+  --text-inverse: #FFFFFF;
+  /* Text that sits *on* an accent or navy fill. */
+  --on-accent: #FFFFFF;
+
+  /* ── Primary accent: royal blue — interactive, "this is live" ──
+     #1D4ED8 clears 6.6:1 on a card, so it is safe as link text as well as
+     as a fill. "strong" means *more emphatic*, which here means darker:
+     hover and pressed states go down the ramp, never up. --accent-electric
+     is the saturated top of the ramp, and it is for light only: glows,
+     gradients, a focus ring, the leading edge of a progress bar. It is not
+     a text colour. */
+  --accent: #2A3CF0;
+  --accent-strong: #1E2BC2;
+  --accent-electric: #4A5BFF;
+  --accent-dim: rgba(42, 60, 240, 0.08);
+  --accent-rgb: 42, 60, 240;
+
+  /* ── CTA accent: the same royal blue ──
+     A primary action does not get its own hue. It earns emphasis through
+     fill weight against the paper, which is a stronger signal than a second
+     colour and costs nothing from the budget. */
+  --cta: #2A3CF0;
+  --cta-strong: #1E2BC2;
+  --cta-dim: rgba(42, 60, 240, 0.08);
+  --cta-rgb: 42, 60, 240;
+
+  /* ── Semantic colours ──
+     Each one is the least loud version of itself that still clears 4.5:1 on
+     a card, because on a near-white page a saturated status colour reads as
+     an alarm even when it is only a label. Success is held in the cool half
+     (teal) so "correct" reads as continuous with the interface's own blue. */
+  --success: #0F766E;
+  --success-soft: rgba(15, 118, 110, 0.09);
+  --success-border: rgba(15, 118, 110, 0.28);
+  --success-rgb: 15, 118, 110;
+
+  --warning: #9A5B0B;
+  --warning-soft: rgba(154, 91, 11, 0.09);
+  --warning-border: rgba(154, 91, 11, 0.26);
+
+  --danger: #B42318;
+  --danger-soft: rgba(180, 35, 24, 0.08);
+  --danger-border: rgba(180, 35, 24, 0.28);
+  --danger-rgb: 180, 35, 24;
+
+  /* ── Cyan: the <2% accent ──
+     Reserved for a measured or collapsed state — a measurement gate, the Z
+     axis of a Bloch sphere, a live hardware reading. It is the one colour on
+     the page that means "this number came from somewhere", so it stops
+     meaning that the moment it is used for decoration. */
+  --signal: #0E7490;
+  --signal-soft: rgba(14, 116, 144, 0.09);
+  --signal-border: rgba(14, 116, 144, 0.30);
+  --signal-rgb: 14, 116, 144;
+
+  /* ── Track colours — one hue, five luminances ──
+     Tracks separate by lightness within the blue family so no track shouts
+     over the content it labels. The ramp runs from a mid blue to the navy
+     ink, i.e. from "start here" to "this is the deep end", which is the
+     order the reader walks it in. The lightest step clears 3:1 on a card and
+     so is sound for borders, icons and badge fills but not for small text. */
+  --track-beginner: #5B7FB9;
+  --track-beginner-rgb: 91, 127, 185;
+  --track-intermediate: #3E64A8;
+  --track-intermediate-rgb: 62, 100, 168;
+  --track-hardware: #2D4E8F;
+  --track-hardware-rgb: 45, 78, 143;
+  --track-advanced: #1F3A6E;
+  --track-advanced-rgb: 31, 58, 110;
+  --track-research: #16294E;
+  --track-research-rgb: 22, 41, 78;
+
+  /* ── Section accent colours — same ramp, same reasoning ── */
+  --section-theory: #5B7FB9;
+  --section-theory-rgb: 91, 127, 185;
+  --section-simulation: #3E64A8;
+  --section-simulation-rgb: 62, 100, 168;
+  --section-quiz: #1F3A6E;
+  --section-quiz-rgb: 31, 58, 110;
+  --section-research: #16294E;
+  --section-research-rgb: 22, 41, 78;
+
+  /* ── Data-visualisation ramp ──
+     The one documented place the one-accent rule bends: a chart with six
+     series needs six separable marks, and luminance alone stops working past
+     about three. Royal blue and cyan take the first two — the pair that keeps
+     two overlapping wave functions legible — then navy, amber, plum and slate
+     fill in behind them at similar luminance, so no series reads as more
+     important than another purely because it is louder. Every one of them
+     clears 3:1 on a card, which is the floor for a 2px line or a filled bar. */
+  --viz-1: #1D4ED8;
+  --viz-2: #0E7490;
+  --viz-3: #1F3A6E;
+  --viz-4: #9A5B0B;
+  --viz-5: #5B4A9E;
+  --viz-6: #5E6B7F;
+
+  /* ── Gradients ──
+     Navy into royal into electric: one hue, three luminances, so it reads as
+     light falling across a surface rather than as two colours meeting. */
+  --hero-gradient: linear-gradient(135deg, #10203A 0%, #1D4ED8 58%, #2F6BFF 100%);
+
+  /* ── Shell ──
+     The chrome is white and the content floor is off-white, so the rails read
+     as sheets laid on the page rather than as tinted furniture. The only thing
+     separating them is a hairline border and the shadow. */
+  --sidebar-width: 280px;
+  --topbar-bg: #FFFFFF;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-footer-bg: #F7F8FA;
+  --content-bg: #F7F8FA;
+
+  --soft-hover: #EEF2F9;
+  --scrollbar-thumb: #BFC3DA;
+  --selection: rgba(42, 60, 240, 0.18);
+
+  /* ── Ink primitives ──
+     These four exist so that no rule below needs a bare rgba(0,0,0,…). A
+     neutral black shadow on a cool white page goes grey and reads as dirt;
+     tinting the shadow with the navy ink is most of what separates this from
+     a default Tailwind surface.
+
+       --shadow-ink-rgb  what a shadow is made of
+       --highlight       the catch-light on a raised edge
+       --scrim           what sits behind a modal
+       --grid-dot        the body background texture */
+  --shadow-ink-rgb: 16, 32, 58;
+  --highlight: rgba(255, 255, 255, 0.9);
+  --scrim: rgba(16, 32, 58, 0.55);
+  --grid-dot: rgba(16, 32, 58, 0.045);
+
+  /* Frosted panels floating over content */
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(16, 32, 58, 0.08);
+
+  /* ── Ambience ──
+     The About page and the motif layer paint light *onto* the page floor:
+     washes, drifting orbs, angled beams, a dot lattice. All of that is
+     additive by nature, which is wrong on paper, so --beam-blend is multiply
+     and every opacity here is a fraction of what an additive version would
+     need. On a near-white field these effects are felt rather than seen, and
+     that is the intended amount. */
+  --lattice-dot: rgba(16, 32, 58, 0.05);
+  /* Faint wash used to lift or recess a surface a few percent against its
+     parent (hover plates, inset panels, editor gutters). It is a *tint*, not
+     a colour: here it adds ink. Always used as
+     rgba(var(--tint-rgb), <alpha>) so the alpha stays at the call site. */
+  --tint-rgb: 16, 32, 58;
+  --particle-core: #2F6BFF;
+  /* Highlighter pen. Yellow because it imitates a physical marker, which is
+     the one thing on the page that is not part of the UI. */
+  --mark-bg: rgba(250, 204, 21, 0.35);
+  --mark-text: #10203A;
+  --ambient-wash-a: 0.10;
+  --ambient-wash-b: 0.07;
+  --orb-opacity: 0.30;
+  --beam-blend: multiply;
+  --beam-opacity: 0.7;
+  --motif-opacity: 0.10;
+  --motif-opacity-ambient: 0.05;
+  --motif-glow: none;
+  --card-motif-opacity: 0.07;
+  --card-motif-opacity-hover: 0.14;
+
+  /* ── Syntax highlighting ──
+     One palette for every place code is coloured: the About page's static
+     Qiskit sample, lesson code blocks, and the Monaco theme registered in
+     lib/editorTheme.js. Roles, not languages — a keyword is a keyword whether
+     it is Python or QASM. Held inside the blue / cyan / plum range so a code
+     block reads as part of the interface rather than as a foreign object, and
+     every role clears 4.5:1 on the editor's white. */
+  --syn-keyword: #1740B8;
+  --syn-class: #0E7490;
+  --syn-function: #5B4A9E;
+  --syn-string: #0F766E;
+  --syn-number: #9A5B0B;
+  --syn-comment: #6B7787;
+  --syn-operator: #41526B;
+
+  /* ── Figure viewports ──
+     The framed 3D/diagram stages (cryostat, learning-path) light their
+     subject against a graded floor. On paper that floor is a shallow cool
+     tint, since a dark well cut into a light page reads as a hole. */
+  --viewport-top: #FFFFFF;
+  --viewport-bottom: #E8EDF5;
+  --viewport-vignette: rgba(16, 32, 58, 0.10);
+  --viewport-pool: rgba(29, 78, 216, 0.07);
+
+  /* ── Elevation scale ──
+     Two layers per step: a tight contact shadow that anchors the element to
+     the page, and a wide ambient one that says how far above it sits. A
+     single soft blur reads as a smudge. The catch-light is a hairline here,
+     because on paper elevation is carried almost entirely by the ambient
+     shadow. Use these instead of hand-rolling box-shadow so elevation stays
+     comparable across components. */
+  --shadow-sm: 0 1px 2px rgba(var(--shadow-ink-rgb), 0.05), 0 1px 3px rgba(var(--shadow-ink-rgb), 0.07);
+  --shadow-md: 0 2px 4px rgba(var(--shadow-ink-rgb), 0.04), 0 8px 20px rgba(var(--shadow-ink-rgb), 0.08);
+  --shadow-lg: 0 4px 8px rgba(var(--shadow-ink-rgb), 0.05), 0 20px 48px rgba(var(--shadow-ink-rgb), 0.12);
+  --shadow-glow: 0 0 0 1px rgba(var(--accent-rgb), 0.28), 0 8px 26px rgba(var(--accent-rgb), 0.16);
+
+  --card-shadow: var(--shadow-md);
+  --lesson-code-bg: #F4F6FA;
+  --lesson-code-text: #10203A;
+
+  /* ── Spacing scale ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* ── Section / card tokens ── */
+  --card-padding: var(--space-xl);
+  --card-radius: 12px;
+  --card-gap: var(--space-lg);
+  --section-gap: var(--space-xl);
+  --page-padding-x: clamp(24px, 6vw, 80px);
+  --page-padding-y: 40px;
+  --page-max-width: 1400px;
+
+  /* ── Bloch sphere & visualisation ──
+     Lit from the top-left, elevation climbing toward white like every other
+     surface. Z stays the odd axis out and is cyan, because Z is the
+     measurement axis: that is the same meaning cyan carries everywhere else
+     on the platform. */
+  --bloch-panel-bg: #FFFFFF;
+  --bloch-sphere-start: #FFFFFF;
+  --bloch-sphere-mid: #EDF1F8;
+  --bloch-sphere-end: #D9E1EF;
+  --bloch-glow: rgba(29, 78, 216, 0.14);
+  --bloch-ring: rgba(29, 78, 216, 0.42);
+  --bloch-circle-z: rgba(14, 116, 144, 0.40);
+  --bloch-circle-x: rgba(29, 78, 216, 0.26);
+  --bloch-circle-y: rgba(31, 58, 110, 0.30);
+  --bloch-axis-x: rgba(29, 78, 216, 0.55);
+  --bloch-axis-y: rgba(31, 58, 110, 0.55);
+  --bloch-axis-z: rgba(14, 116, 144, 0.65);
+  --bloch-axis-label: #10203A;
+  --bloch-point-stroke: #FFFFFF;
+  --bloch-highlight: rgba(16, 32, 58, 0.08);
+
+  /* ── Gate visualisation ──
+     Five roles, and the colour names the role rather than the letter: a
+     unitary is royal blue, a phase gate is navy, a rotation is the mid blue
+     between them, a controlled gate is slate because the interesting part is
+     the wire and not the box, and measurement is the cyan — it is the one
+     gate that destroys the state, so it is the one gate that leaves the blue
+     family. The token names still say h/x/y/z/cnot for the five slots
+     GATE_COLORS maps onto; see lib/quantum/gates.js for which is which. */
+  --gate-h-fill: rgba(29, 78, 216, 0.10);
+  --gate-h-shell: #FFFFFF;
+  --gate-h-stroke: #1D4ED8;
+  --gate-h-label: #1740B8;
+  --gate-x-fill: rgba(62, 100, 168, 0.10);
+  --gate-x-shell: #FFFFFF;
+  --gate-x-stroke: #3E64A8;
+  --gate-x-label: #2D4E8F;
+  --gate-y-fill: rgba(62, 100, 168, 0.10);
+  --gate-y-shell: #FFFFFF;
+  --gate-y-stroke: #3E64A8;
+  --gate-y-label: #2D4E8F;
+  --gate-z-fill: rgba(31, 58, 110, 0.10);
+  --gate-z-shell: #FFFFFF;
+  --gate-z-stroke: #1F3A6E;
+  --gate-z-label: #16294E;
+  --gate-cnot-fill: rgba(94, 107, 127, 0.10);
+  --gate-cnot-shell: #FFFFFF;
+  --gate-cnot-stroke: #5E6B7F;
+  --gate-cnot-label: #41526B;
+  --gate-measure-fill: rgba(14, 116, 144, 0.12);
+  --gate-measure-shell: #FFFFFF;
+  --gate-measure-stroke: #0E7490;
+  --gate-measure-label: #0B5C73;
+
+  /* ── Circuit diagram ── */
+  --diagram-canvas-bg: #F9FAFC;
+  --diagram-wire: rgba(16, 32, 58, 0.34);
+  --diagram-label: #10203A;
+  --diagram-subtle: #5E6B7F;
+  --diagram-endcap: rgba(16, 32, 58, 0.45);
+  --diagram-default-fill: rgba(29, 78, 216, 0.08);
+  --diagram-default-shell: #FFFFFF;
+  --diagram-default-stroke: #1D4ED8;
+  --diagram-default-label: #1740B8;
+
+  /* ── The bill ──
+     The cobalt ground and its ink. White on #2A3CF0 is 7:1, so the whole
+     billing scale down to 14px body passes AA. --bill-ink-2 is the ground's
+     own tint of white for secondary lines (4.8:1), never a grey.
+     --bill-night is the prose ink of the reading sheet and the ink of an
+     inverted control on white. */
+  --bill-ground: #2A3CF0;
+  --bill-ground-deep: #1E2BC2;
+  --bill-ink: #FFFFFF;
+  --bill-ink-2: #D0D4FC;
+  --bill-rule: rgba(255, 255, 255, 0.38);
+  --bill-rule-strong: #FFFFFF;
+  --bill-night: #0B0F2A;
+  --sheet: #FFFFFF;
+  --sheet-rule: #D5D8EC;
+
+  /* The billing scale: eight sizes of one face, set by rank. Fluid, so a
+     headliner owns the width at any screen, capped at 6rem. */
+  --bill-1: clamp(3rem, 1.2rem + 6.2vw, 6rem);
+  --bill-2: clamp(2rem, 1rem + 3.2vw, 3.75rem);
+  --bill-3: clamp(1.5rem, 0.95rem + 1.7vw, 2.4rem);
+  --bill-4: clamp(1.25rem, 0.95rem + 0.9vw, 1.7rem);
+  --bill-5: 1.25rem;
+  --bill-6: 1.0625rem;
+  --bill-7: 0.9375rem;
+  --bill-8: 0.8125rem;
+  --bill-tracking: 0.01em;
+  --bill-leading: 0.92;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+

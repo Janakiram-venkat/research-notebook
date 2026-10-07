@@ -1,0 +1,3603 @@
+/*
+ * The Research Notebook editor: the prose surface, its blocks, the outline,
+ * history and sharing panels.
+ *
+ * Carved out of index.css because none of it is reachable without opening a
+ * note, and it was 70 kB of the one stylesheet every visitor downloaded
+ * before the first paint. Imported by the three notebook routes.
+ */
+
+/* Notebook usability + responsive editor polish */
+.nb-note-page {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  padding-inline: clamp(16px, 3vw, 36px);
+}
+
+.nb-note-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  padding: 10px 0;
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.nb-saved-hint.is-saving { color: var(--accent); }
+
+.nb-code,
+.nb-circuit { min-width: 0; }
+
+.nb-code-toolbar,
+.nb-circuit-toolbar { flex-wrap: wrap; }
+.nb-circuit-scroll { max-width: 100%; overscroll-behavior-x: contain; }
+.nb-circuit-svg { max-height: 520px; }
+@media (max-width: 700px) {
+  .nb-dash { padding: 18px 14px 70px; }
+  .nb-dash-header { flex-direction: column; }
+  .nb-new-btn { width: 100%; justify-content: center; }
+  .nb-grid { grid-template-columns: minmax(0, 1fr); }
+  .nb-modal { max-height: calc(100dvh - 24px); overflow-y: auto; padding: 18px; }
+  .nb-template-grid { grid-template-columns: minmax(0, 1fr); }
+  .nb-note-page { padding: 8px 12px 90px; }
+  .nb-note-topbar-right { gap: 7px; }
+  .nb-note-title { font-size: clamp(25px, 8vw, 32px); }
+  .nb-code-toolbar-spacer { display: none; }
+  .nb-code-toolbar > *, .nb-circuit-toolbar > * { flex-shrink: 0; }
+  .nb-circuit-name { order: 5; flex: 1 0 100%; padding: 5px 3px; }
+  .nb-circuit-to-code { order: 4; }
+  .nb-code-icon-btn { padding-inline: 8px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESEARCH NOTEBOOK
+══════════════════════════════════════════════════════════ */
+
+/* ── Dashboard ── */
+.nb-dash {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+}
+
+.nb-dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+}
+
+.nb-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.nb-dash-title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.nb-dash-sub {
+  margin-top: 8px;
+  max-width: 620px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.nb-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 11px 18px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-inverse);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.nb-new-btn:hover {
+  filter: brightness(1.08);
+}
+
+.nb-new-btn:active {
+  transform: translateY(1px);
+}
+
+.nb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.nb-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.nb-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.nb-search button {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.nb-search button:hover {
+  color: var(--text-secondary);
+}
+
+.nb-tagfilter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.nb-tagfilter-icon {
+  color: var(--text-muted);
+}
+
+.nb-tagfilter-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.nb-tagfilter-chip:hover {
+  border-color: var(--border-hover);
+}
+
+.nb-tagfilter-chip.is-active {
+  --tag-l: 30%;
+  color: hsl(var(--tag-hue, 217) 65% 96%);
+  background: hsl(var(--tag-hue, 217) 55% var(--tag-l));
+  border-color: hsl(var(--tag-hue, 217) 55% var(--tag-l));
+}
+
+.nb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+}
+
+.nb-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+}
+
+.nb-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-soft);
+  transform: translateY(-2px);
+}
+
+.nb-card-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.nb-card-snippet {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nb-card-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.nb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 7px;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.nb-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nb-card-tag {
+  --tag-l: 32%;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--tag-hue, 217) 65% var(--tag-l));
+  background: hsl(var(--tag-hue, 217) 55% 50% / 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.nb-card-time {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.nb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 70px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.nb-empty p {
+  font-size: 15px;
+}
+
+/* ── Template picker modal ── */
+.nb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+}
+
+.nb-modal {
+  width: 100%;
+  max-width: 640px;
+  padding: 26px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgba(var(--shadow-ink-rgb), 0.5);
+}
+
+.nb-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nb-modal-head h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.nb-modal-head button {
+  color: var(--text-muted);
+}
+
+.nb-modal-head button:hover {
+  color: var(--text-primary);
+}
+
+.nb-modal-sub {
+  margin: 6px 0 18px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.nb-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+}
+
+.nb-template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.nb-template-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.nb-template-label {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--text-primary);
+}
+
+.nb-template-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ── Note editor ── */
+.nb-note-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 22px 24px 120px;
+}
+
+.nb-note-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.nb-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.nb-back-link:hover {
+  color: var(--text-primary);
+}
+
+.nb-note-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nb-saved-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Lab report mode, and the public /notebook/shared/:slug page that reuses it.
+   Reads as a document rather than an editor: generous measure, clear section
+   rules, nothing that looks clickable. */
+.nb-report {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
+}
+
+.nb-report-header { margin-bottom: 22px; }
+
+.nb-report-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.nb-report-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.nb-report-section {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.nb-report-section-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.nb-report-block { margin-bottom: 14px; }
+.nb-report-block:last-child { margin-bottom: 0; }
+
+.nb-report-sublabel {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.nb-report-code,
+.nb-report-output {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+
+.nb-report-output { background: var(--bg-card); }
+
+.nb-report-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.nb-report-figure {
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.nb-report-circuit { overflow-x: auto; }
+
+/* Advisory only — it must not read as an error, because an unfinished lab
+   notebook is a completely normal thing to be looking at. */
+.nb-report-hints {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.nb-report-hints-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.nb-report-hints ul { margin: 0; padding-left: 20px; }
+.nb-report-hints li { font-size: 12.5px; color: var(--text-muted); margin-bottom: 3px; }
+
+.nb-report-appendix .nb-report-section-title { color: var(--text-muted); }
+.nb-report-empty { color: var(--text-muted); font-size: 13.5px; }
+
+/* Public shared page. Deliberately spare: the viewer usually has no account
+   here, so there is no app chrome implying they should. */
+.nb-shared-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.nb-shared-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.nb-shared-missing {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.nb-shared-missing h1 {
+  margin: 14px 0 6px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+
+.nb-shared-home {
+  display: inline-block;
+  margin-top: 16px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nb-shared-footer {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* "Your notes on this lesson/project" — the panel that makes the notebook part
+   of a lesson rather than a separate destination. */
+.nb-attached {
+  margin: 28px 0 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.nb-attached-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nb-attached-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.nb-attached-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nb-attached-new:hover { border-color: var(--accent); color: var(--accent); }
+
+.nb-attached-empty {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.nb-attached-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nb-attached-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13.5px;
+}
+
+.nb-attached-item:hover { background: var(--bg-card); color: var(--text-primary); }
+.nb-attached-item-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-attached-item-meta { font-size: 11.5px; color: var(--text-muted); flex-shrink: 0; }
+
+/* The chip on a note saying what it's about. */
+.nb-attach-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.nb-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.nb-attach-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Target gone from the roster: still says what the note is about, but must not
+   look clickable, because there is nowhere to go. */
+.nb-attach-chip.is-unresolved {
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+.nb-attach-chip-kind {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.nb-attach-detach {
+  display: inline-flex;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.nb-attach-detach:hover { color: var(--danger); background: var(--surface-soft); }
+
+.nb-folder-chip-count {
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* Version history drawer. Two panes: the list of snapshots on the left, a
+   read-only preview of the selected one on the right. */
+.nb-history-modal {
+  max-width: 940px;
+  width: 100%;
+}
+
+.nb-history-body {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.nb-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+
+.nb-history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 9px 12px 9px 0;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.nb-history-item:hover { background: var(--surface-soft); }
+
+.nb-history-item.is-active {
+  border-left-color: var(--accent);
+  background: var(--surface-soft);
+  color: var(--text-primary);
+}
+
+.nb-history-when { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.nb-history-reason { font-size: 11.5px; color: var(--accent); }
+.nb-history-meta { font-size: 11.5px; color: var(--text-muted); }
+
+.nb-history-preview {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nb-history-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nb-history-preview-head > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nb-history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.nb-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nb-history-btn:hover:not(:disabled) { border-color: var(--accent); }
+.nb-history-btn:disabled { opacity: 0.55; cursor: default; }
+
+.nb-history-btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent); /* not --surface: that token doesn't exist */
+}
+
+.nb-history-preview-body {
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.nb-history-preview-block { margin-bottom: 12px; }
+
+.nb-history-preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.nb-history-preview-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.nb-history-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 4px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+/* A failed load is not an empty history and must not be styled like one. */
+.nb-history-error { color: var(--danger); }
+@media (max-width: 760px) {
+  .nb-history-body { grid-template-columns: minmax(0, 1fr); }
+  .nb-history-list {
+    max-height: 180px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .nb-history-item { padding-right: 0; }
+}
+
+/* Signed-out stand-in for the notebook's Run button. Reads as an action rather
+   than a disabled control, because signing in is a thing the user can actually
+   do — the accent border says "this still works, just not yet". */
+.nb-run-btn-signin {
+  background: var(--surface-soft);
+  color: var(--accent);
+  border: 1px dashed var(--border-strong);
+}
+
+.nb-run-btn-signin:hover {
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+/* Sync pill — the server-acknowledgement half of the save indicator.
+   `synced` is the resting state for a signed-in user and is deliberately as
+   quiet as the muted states; only conflict and error take colour, because only
+   those ask the user to do something. */
+.nb-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.nb-sync-pill.is-compact { padding: 3px 6px; }
+.nb-sync-label { line-height: 1; }
+
+.nb-sync-muted { color: var(--text-muted); }
+.nb-sync-busy { color: var(--accent); }
+.nb-sync-ok { color: var(--success); border-color: var(--success-border); }
+.nb-sync-warn { color: var(--warning); border-color: var(--warning-border); }
+.nb-sync-danger { color: var(--danger); border-color: var(--danger-border); }
+
+.nb-sync-spin { animation: nb-sync-spin 1.1s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nb-sync-spin { animation: none; }
+}
+
+/* The conflict banner reuses the storage-warning shell but carries the warning
+   hue, since it reports a state the user has to resolve rather than a limit
+   they're approaching. */
+.nb-conflict-warn {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.nb-note-title {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+
+.nb-note-title::placeholder {
+  color: var(--text-muted);
+}
+
+.nb-tagbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+
+.nb-tag {
+  --tag-l: 32%;
+  --tag-bg-a: 0.1;
+  --tag-border-a: 0.32;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--tag-hue, 217) 65% var(--tag-l));
+  background: hsl(var(--tag-hue, 217) 55% 50% / var(--tag-bg-a));
+  border: 1px solid hsl(var(--tag-hue, 217) 55% 50% / var(--tag-border-a));
+  padding: 4px 6px 4px 11px;
+  border-radius: 999px;
+}
+
+.nb-tag button {
+  display: inline-flex;
+  color: hsl(var(--tag-hue, 217) 65% var(--tag-l));
+  opacity: 0.7;
+}
+
+.nb-tag button:hover {
+  opacity: 1;
+}
+
+.nb-tag-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nb-tag-input {
+  width: 90px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.nb-tag-input:focus {
+  border-color: var(--accent);
+}
+
+.nb-tag-add {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+/* ── Blocks ── */
+.nb-blocks {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Markdown rendering */
+.nb-md {
+  color: var(--text-primary);
+}
+
+.nb-md-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 14px;
+}
+
+.nb-md-h {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.nb-md-h1 {
+  font-size: 26px;
+  margin: 12px 0 8px;
+}
+
+.nb-md-h2 {
+  font-size: 21px;
+  margin: 18px 0 8px;
+}
+
+.nb-md-h3 {
+  font-size: 17px;
+  margin: 14px 0 6px;
+}
+
+.nb-md-h4 {
+  font-size: 15px;
+  margin: 12px 0 6px;
+  color: var(--text-secondary);
+}
+
+.nb-md-p {
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 8px 0;
+  color: var(--text-secondary);
+}
+
+.nb-md-list {
+  margin: 8px 0 8px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nb-md-list li {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  list-style: disc;
+}
+
+.nb-md-ol li {
+  list-style: decimal;
+}
+
+.nb-md-check {
+  list-style: none !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-left: -18px;
+}
+
+.nb-md-check input {
+  margin-top: 4px;
+  accent-color: var(--accent);
+}
+
+.nb-md-quote {
+  margin: 10px 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-dim);
+  border-radius: 0 8px 8px 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.nb-md-hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.nb-md-pre {
+  background: var(--surface-code);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.nb-md-pre code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.nb-inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--surface-muted);
+  color: var(--accent-strong);
+}
+
+.nb-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nb-md-blockmath {
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+/* ── Code block ── */
+.nb-code {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-code);
+  margin: 4px 0;
+}
+
+.nb-code-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.nb-code-toolbar-spacer {
+  flex: 1;
+}
+
+.nb-fw-wrap {
+  position: relative;
+}
+
+.nb-fw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 6px 11px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.nb-fw-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 150px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 30px rgba(var(--shadow-ink-rgb), 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nb-fw-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  border-radius: 7px;
+}
+
+.nb-fw-item:hover {
+  background: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+.nb-fw-item.is-active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.nb-import-menu {
+  right: 0;
+  left: auto;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.nb-import-divider {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 8px 10px 4px;
+}
+
+.nb-import-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 8px 10px;
+  line-height: 1.5;
+}
+
+.nb-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-inverse);
+  background: var(--cta, var(--accent));
+  padding: 6px 13px;
+  border-radius: 8px;
+}
+
+.nb-run-btn:hover {
+  filter: brightness(1.08);
+}
+
+.nb-run-btn:disabled {
+  opacity: 0.6;
+}
+
+.nb-code-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.nb-code-icon-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.nb-code-output {
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.nb-code-output-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.nb-code-runtime {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: none;
+}
+
+.nb-code-stdout,
+.nb-code-stderr {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 0 14px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nb-code-stdout {
+  color: var(--text-secondary);
+}
+
+.nb-code-stderr {
+  color: var(--danger);
+}
+
+.nb-code-output.is-error .nb-code-output-head {
+  color: var(--danger);
+}
+
+.nb-code-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 14px 14px;
+}
+
+.nb-code-plot {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  /* Plots arrive as transparent PNGs drawn in dark ink: the plate stays white
+     in both themes, or the figure greys out. */
+  background: #FFFFFF;
+}
+
+/* ── Circuit block ── */
+.nb-circuit {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.nb-circuit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.nb-circuit-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.nb-circuit-name {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.nb-circuit-name::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.nb-circuit-scroll {
+  overflow-x: auto;
+  padding: 14px;
+}
+
+.nb-circuit-svg {
+  display: block;
+}
+
+.nb-circuit-error {
+  font-size: 12.5px;
+  color: var(--danger);
+  padding: 8px 14px 0;
+}
+
+.nb-circuit-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 34px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.nb-circuit-empty:hover {
+  color: var(--accent);
+  background: var(--surface-soft);
+}
+
+.nb-circuit-empty>span:first-of-type {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nb-circuit-empty-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+@media (max-width: 640px) {
+  .nb-note-title {
+    font-size: 26px;
+  }
+}
+
+
+/* ══════════════════ NOTEBOOK UX REFRESH ══════════════════ */
+.nb-dash {
+  max-width: 1120px;
+}
+
+.nb-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.nb-new-btn-secondary {
+  color: var(--text-primary);
+  background: var(--surface-soft);
+  border-color: var(--border);
+}
+
+.nb-new-btn-secondary:hover {
+  border-color: var(--accent);
+  filter: none;
+}
+
+.nb-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.nb-overview-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.07), rgba(var(--tint-rgb), 0.01));
+  border: 1px solid var(--border);
+}
+
+.nb-overview-card span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nb-overview-card strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.nb-card {
+  min-height: 168px;
+}
+
+.nb-card:focus-visible,
+.nb-template-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.nb-modal {
+  max-width: 720px;
+}
+
+.nb-template-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+}
+
+.nb-template-card {
+  min-height: 116px;
+}
+
+.nb-note-page {
+  max-width: 920px;
+}
+
+.nb-md-empty {
+  padding: 4px 0;
+}
+@media (max-width: 760px) {
+  .nb-dash-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nb-header-actions {
+    justify-content: stretch;
+  }
+
+  .nb-header-actions .nb-new-btn {
+    justify-content: center;
+    flex: 1 1 140px;
+  }
+
+  .nb-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nb-note-topbar {
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+  }
+}
+@media (max-width: 480px) {
+  .nb-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* ══════════════════ NOTEBOOK UX REFRESH — live preview + math tools ══════════════════ */
+.nb-note-page {
+  max-width: 1120px;
+}
+
+.nb-header-actions {
+  align-items: center;
+}
+
+.nb-guide-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.08), rgba(var(--cta-rgb), 0.04));
+}
+
+.nb-guide-icon {
+  flex-shrink: 0;
+  color: var(--accent-strong);
+}
+
+.nb-guide-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nb-guide-dismiss:hover {
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--text-primary);
+}
+
+.nb-guide-panel strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.nb-guide-panel span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.nb-guide-examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nb-guide-examples code {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--accent-strong);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 999px;
+  padding: 5px 8px;
+}
+
+.nb-md .math-text-inline {
+  color: var(--text-primary);
+}
+
+.nb-md-blockmath.math-text-block {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.055);
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+}
+@media (max-width: 900px) {
+  .nb-note-topbar,
+  .nb-note-topbar-right,
+  .nb-guide-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nb-guide-examples {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 640px) {
+  .nb-note-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .nb-code-toolbar,
+  .nb-circuit-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* ══════════════════ NOTEBOOK PRO UX — folders, pins, single editor ══════════════════ */
+.nb-dash-header-pro {
+  align-items: flex-start;
+}
+
+.nb-folder-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 18px;
+}
+
+.nb-folder-chip,
+.nb-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.nb-folder-chip:hover,
+.nb-filter-pill:hover {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.nb-folder-chip.is-active,
+.nb-filter-pill.is-active {
+  color: var(--text-inverse);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.nb-grid-pro {
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+}
+
+.nb-card.is-pinned {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.08), 0 18px 40px rgba(var(--shadow-ink-rgb), 0.18);
+}
+
+.nb-card-head,
+.nb-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nb-card-folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 80%;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nb-card-icon-btn,
+.nb-card-duplicate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.nb-card-icon-btn {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+}
+
+/* The card is an <article> now, with a stretched link over the title doing the
+   "open" job. The action buttons sit above that overlay so they stay clickable
+   — and, unlike the old nested <button>s, are reachable by keyboard. */
+.nb-card { position: relative; }
+.nb-card-actions {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  gap: 6px;
+  /* The folder label is hidden for unfiled notes, so don't rely on the head's
+     space-between to keep these on the right. */
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.nb-card:hover .nb-card-actions,
+.nb-card:focus-within .nb-card-actions { opacity: 1; }
+@media (hover: none) {
+  .nb-card-actions { opacity: 1; }
+}
+
+.nb-card-open { color: inherit; text-decoration: none; }
+.nb-card-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+}
+.nb-card:has(.nb-card-open:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.nb-card-open:focus-visible { outline: none; }
+
+.nb-card-icon-danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.nb-card-duplicate {
+  padding: 5px 8px;
+}
+
+.nb-card-icon-btn:hover,
+.nb-card-duplicate:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--accent-dim);
+}
+
+.nb-card-icon-btn.is-active {
+  color: var(--text-inverse);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.nb-note-page-pro {
+  max-width: 980px;
+}
+
+.nb-note-organizer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.nb-note-organizer .nb-tagbar {
+  margin-bottom: 0;
+}
+
+.nb-folder-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.nb-folder-editor input {
+  width: 150px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.nb-wiki-link {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  color: var(--accent-strong);
+  border-bottom: 1px dashed rgba(var(--accent-rgb), 0.55);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.nb-wiki-link:hover {
+  color: var(--cta);
+  border-bottom-color: var(--cta);
+}
+
+/* A link whose target note doesn't exist (yet) — muted so a dead link reads as
+   dead instead of looking identical to a working one. */
+.nb-wiki-link.is-unresolved {
+  color: var(--text-muted);
+  border-bottom-color: currentColor;
+  opacity: 0.85;
+}
+
+.nb-md-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 12px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.nb-md-callout {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  background: rgba(var(--accent-rgb), 0.07);
+  color: var(--text-secondary);
+}
+
+.nb-md-callout strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.nb-md-callout span {
+  line-height: 1.65;
+}
+
+.nb-md-callout-tip,
+.nb-md-callout-note {
+  border-color: rgba(var(--accent-rgb), 0.28);
+}
+
+.nb-md-callout-formula {
+  border-color: rgba(var(--accent-rgb), 0.36);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.nb-md-callout-warning {
+  border-color: rgba(var(--danger-rgb), 0.38);
+  background: rgba(var(--danger-rgb), 0.08);
+}
+
+.nb-md-callout-question,
+.nb-md-callout-example {
+  border-color: rgba(var(--cta-rgb), 0.32);
+  background: rgba(var(--cta-rgb), 0.07);
+}
+
+.nb-print-document {
+  display: none;
+}
+
+.nb-print-header {
+  margin-bottom: 28px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d4d4d8;
+}
+
+.nb-print-header p {
+  margin: 0 0 6px;
+  color: #52525b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nb-print-header h1 {
+  margin: 0 0 10px;
+  color: #09090b;
+  font-size: 30px;
+}
+
+.nb-print-header div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #52525b;
+  font-size: 12px;
+}
+
+.nb-print-block {
+  margin: 0 0 22px;
+  page-break-inside: avoid;
+}
+
+.nb-print-block-label {
+  margin: 0 0 8px;
+  color: #52525b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nb-print-code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #f4f4f5;
+  color: #18181b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+@media print {
+
+  .nb-print-document,
+  .nb-print-document * {
+    visibility: visible !important;
+  }
+
+  .nb-print-document {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+    background: #fff;
+    color: #18181b;
+  }
+
+  .nb-print-document .nb-md,
+  .nb-print-document .nb-md-p,
+  .nb-print-document .nb-md-list,
+  .nb-print-document .nb-md-quote,
+  .nb-print-document .nb-md-callout {
+    color: #18181b;
+  }
+
+  .nb-print-document .nb-md-h,
+  .nb-print-document .nb-md-callout strong {
+    color: #09090b;
+  }
+
+  .nb-print-document .nb-md-callout,
+  .nb-print-document .nb-md-blockmath.math-text-block {
+    border-color: #d4d4d8;
+    background: #f8fafc;
+  }
+
+  .nb-print-document .nb-md-pre,
+  .nb-print-document .nb-inline-code {
+    color: #18181b;
+    background: #f4f4f5;
+    border-color: #d4d4d8;
+  }
+
+  .nb-print-document .nb-circuit-scroll {
+    overflow: visible;
+  }
+}
+@media (max-width: 760px) {
+  .nb-folder-editor,
+  .nb-folder-editor input {
+    width: 100%;
+  }
+
+  .nb-note-organizer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nb-grid-pro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── ProseMirror editable surface (.nb-prose) ──────────────────────────────── */
+.nb-prose {
+  outline: none;
+  padding: 12px 14px;
+  min-height: 60px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+/* placeholder (Placeholder extension) */
+.nb-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.nb-prose > * + * { margin-top: 0.7em; }
+.nb-prose h1 { font-family: var(--font-display); font-size: 1.7em; font-weight: 800; line-height: 1.2; }
+.nb-prose h2 { font-family: var(--font-display); font-size: 1.35em; font-weight: 700; line-height: 1.25; }
+.nb-prose h3 { font-family: var(--font-display); font-size: 1.12em; font-weight: 700; }
+.nb-prose ul, .nb-prose ol { padding-left: 1.4em; }
+.nb-prose ul { list-style: disc; }
+.nb-prose ol { list-style: decimal; }
+.nb-prose li { margin: 0.2em 0; }
+.nb-prose li > p { margin: 0; }
+.nb-prose a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+.nb-prose strong { color: var(--text-primary); font-weight: 700; }
+.nb-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--accent-strong);
+  background: var(--surface-muted, rgba(var(--accent-rgb), 0.1));
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.nb-prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 0 2px 14px;
+  color: var(--text-secondary);
+}
+.nb-prose pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface-code);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.nb-prose pre code { background: none; color: inherit; padding: 0; }
+
+/* math nodes (@tiptap/extension-mathematics) */
+.nb-prose .inline-math,
+.nb-prose .tiptap-mathematics-render { cursor: pointer; }
+.nb-prose .inline-math .tiptap-mathematics-render {
+  padding: 0 2px;
+  border-radius: 4px;
+}
+.nb-prose .block-math {
+  display: block;
+  margin: 12px 0;
+  padding: 10px 12px;
+  text-align: center;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.055);
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  overflow-x: auto;
+}
+.nb-prose .tiptap-mathematics-render--editable:hover {
+  background: var(--accent-dim);
+}
+.ProseMirror-selectednode > .tiptap-mathematics-render,
+.nb-prose .inline-math.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  border-radius: 4px;
+}
+
+/* ── Notebook single-note editor: an academic reading column inside the app ──── */
+/* Lives in the normal app shell (sidebar + header stay visible); a centered,
+   paper-like measure keeps prose readable. */
+.nb-note-page-pro {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 6px 0 140px;
+}
+
+/* Sticky, full-width top bar */
+.nb-note-page-pro .nb-note-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 0 22px;
+  padding: 6px 0 12px;
+  background: color-mix(in srgb, var(--bg-primary) 90%, transparent);
+  backdrop-filter: blur(10px);
+}
+.nb-topbar-count { font-size: 12px; color: var(--text-muted); }
+
+/* Actions overflow menu */
+.nb-more-menu { position: relative; }
+.nb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.nb-icon-btn:hover,
+.nb-icon-btn.is-open {
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.nb-more-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 18px 40px rgba(var(--shadow-ink-rgb), 0.4);
+}
+.nb-more-pop button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-more-pop button:hover { background: var(--surface-soft); color: var(--text-primary); }
+.nb-more-sep { height: 1px; margin: 5px 4px; background: var(--border); }
+.nb-more-pop .nb-more-danger:hover { color: var(--danger); }
+
+/* Big document title */
+.nb-note-page-pro .nb-note-title {
+  font-size: clamp(30px, 4vw, 42px);
+  margin: 6px 0 10px;
+}
+
+/* Slim, subtle organizer (folder + tags) under the title */
+.nb-note-organizer-slim {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 0 0 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+.nb-note-organizer-slim:hover,
+.nb-note-organizer-slim:focus-within { opacity: 1; }
+.nb-note-organizer-slim .nb-folder-editor { gap: 5px; }
+.nb-note-organizer-slim .nb-folder-editor input { font-size: 12.5px; }
+
+/* Academic writing surface — serif reading column, paper-like scale. */
+.nb-note-page-pro .nb-note-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.nb-doc-prose {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.85;
+  color: var(--text-primary);
+  padding: 4px 2px;
+}
+.nb-doc-prose > * + * { margin-top: 0.95em; }
+.nb-doc-prose p { margin: 0; }
+.nb-doc-prose h1,
+.nb-doc-prose h2,
+.nb-doc-prose h3 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.012em;
+  color: var(--text-primary);
+}
+.nb-doc-prose h1 { font-size: 1.62em; font-weight: 600; line-height: 1.25; margin-top: 1.3em; }
+.nb-doc-prose h2 {
+  font-size: 1.3em; font-weight: 600; line-height: 1.3; margin-top: 1.35em;
+  padding-bottom: 0.22em; border-bottom: 1px solid var(--border);
+}
+.nb-doc-prose h3 { font-size: 1.1em; font-weight: 600; margin-top: 1.1em; }
+.nb-doc-prose blockquote {
+  font-style: italic;
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 1.1em;
+  color: var(--text-secondary);
+  background: none;
+}
+/* Symbols read better monospaced — keep code upright even inside serif prose. */
+.nb-doc-prose code,
+.nb-doc-prose pre,
+.nb-doc-prose pre code { font-family: var(--font-mono); font-style: normal; }
+/* KaTeX display math: a touch more air, centered like a paper. */
+.nb-doc-prose .block-math { margin: 0.4em 0; }
+@media (max-width: 768px) {
+  .nb-note-page-pro { padding: 6px 0 120px; }
+  .nb-doc-prose { font-size: 17px; }
+}
+
+/* Suggestion popup (slash menu + wiki-link autocomplete) */
+.nb-suggest-popup { position: absolute; z-index: 1000; }
+.nb-suggest {
+  width: 288px;
+  max-height: 328px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 18px 48px rgba(var(--shadow-ink-rgb), 0.46);
+}
+.nb-suggest-empty { padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.nb-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.nb-suggest-item.is-active { background: var(--accent-dim); color: var(--text-primary); }
+.nb-suggest-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+.nb-suggest-item.is-active .nb-suggest-ico { background: var(--bg-card); }
+.nb-suggest-text { display: flex; flex-direction: column; min-width: 0; }
+.nb-suggest-title { font-size: 13px; font-weight: 650; color: var(--text-primary); }
+.nb-suggest-sub { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Floating (bubble) formatting toolbar */
+.nb-bubble-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-card);
+  box-shadow: 0 14px 36px rgba(var(--shadow-ink-rgb), 0.46);
+}
+.nb-bm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.nb-bm-glyph { font-size: 15px; line-height: 1; font-weight: 600; }
+.nb-bm-btn:hover { background: var(--surface-soft); color: var(--text-primary); }
+.nb-bm-btn.is-active { background: var(--accent-dim); color: var(--accent-strong); }
+.nb-bm-btn-wide { padding: 0 9px; }
+.nb-bm-sep { width: 1px; align-self: stretch; margin: 3px 2px; background: var(--border); }
+.nb-bm-menu { position: relative; }
+.nb-bm-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1001;
+  width: 250px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 16px 42px rgba(var(--shadow-ink-rgb), 0.5);
+}
+.nb-bm-popgroup + .nb-bm-popgroup { margin-top: 8px; }
+.nb-bm-poplabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.nb-bm-symgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 5px; }
+.nb-bm-sym {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.nb-bm-sym:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+/* In-editor node styling (TipTap .nb-prose) */
+.nb-prose a.nb-wiki-link { cursor: pointer; text-decoration: none; }
+.nb-prose mark, .nb-md-mark { padding: 0 2px; border-radius: 3px; background: var(--mark-bg); color: var(--mark-text); }
+.nb-prose img { max-width: 100%; margin: 8px 0; border-radius: 10px; }
+.nb-prose img.ProseMirror-selectednode { outline: 2px solid var(--accent); }
+
+.nb-prose ul[data-type="taskList"] { list-style: none; padding-left: 2px; margin: 6px 0; }
+.nb-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }
+.nb-prose ul[data-type="taskList"] li > label { margin-top: 3px; user-select: none; }
+.nb-prose ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; }
+.nb-prose ul[data-type="taskList"] input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent-strong); cursor: pointer; }
+
+.nb-prose .nb-callout, .nb-callout {
+  position: relative;
+  margin: 12px 0;
+  padding: 12px 14px 12px 42px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 12px;
+  background: rgba(var(--accent-rgb), 0.07);
+  color: var(--text-secondary);
+}
+.nb-callout::before { content: '✦'; position: absolute; left: 15px; top: 11px; color: var(--accent-strong); }
+.nb-callout[data-callout="tip"]::before { content: '💡'; }
+.nb-callout[data-callout="info"]::before { content: 'ℹ'; }
+.nb-callout[data-callout="question"]::before { content: '?'; }
+.nb-callout[data-callout="example"]::before { content: '▸'; }
+.nb-callout[data-callout="warning"] { border-color: rgba(var(--danger-rgb), 0.4); background: rgba(var(--danger-rgb), 0.08); }
+.nb-callout[data-callout="warning"]::before { content: '⚠'; color: var(--danger); }
+.nb-callout[data-callout="formula"] { border-color: rgba(var(--accent-rgb), 0.36); background: rgba(var(--accent-rgb), 0.08); }
+
+/* ══ Notebook navigation & polish — Phases 2–7 ══════════════════════════════ */
+
+/* Command palette (Ctrl+K) */
+.nb-cmd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+  animation: nb-fade 0.12s ease;
+}
+.nb-cmd {
+  width: min(640px, 92vw);
+  max-height: 66vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: 0 30px 80px rgba(var(--shadow-ink-rgb), 0.55);
+  overflow: hidden;
+  animation: nb-pop 0.14s ease;
+}
+.nb-cmd-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.nb-cmd-search input {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+}
+.nb-cmd-kbd, .nb-shortcuts-keys kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: inherit;
+}
+.nb-cmd-list { overflow-y: auto; padding: 6px; }
+.nb-cmd-empty { padding: 22px; text-align: center; color: var(--text-muted); }
+.nb-cmd-group { margin-bottom: 4px; }
+.nb-cmd-group-label {
+  padding: 8px 10px 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.nb-cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.nb-cmd-item.is-active { background: var(--accent-dim); color: var(--text-primary); }
+.nb-cmd-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+.nb-cmd-item.is-active .nb-cmd-ico { background: var(--bg-card); }
+.nb-cmd-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.nb-cmd-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.nb-cmd-hint { font-size: 11.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-cmd-enter { color: var(--text-muted); flex: none; }
+
+/* Shortcuts help modal */
+.nb-shortcuts {
+  width: min(440px, 92vw);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  box-shadow: 0 30px 80px rgba(var(--shadow-ink-rgb), 0.55);
+  animation: nb-pop 0.14s ease;
+  overflow: hidden;
+}
+.nb-shortcuts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.nb-shortcuts-head h2 { font-size: 16px; margin: 0; color: var(--text-primary); }
+.nb-shortcuts-head button { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.nb-shortcuts-list { padding: 8px 18px 18px; }
+.nb-shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.08);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+}
+.nb-shortcuts-row:last-child { border-bottom: 0; }
+.nb-shortcuts-keys { display: inline-flex; gap: 4px; }
+
+/* Outline rail */
+.nb-outline {
+  position: fixed;
+  top: 132px;
+  /* The note page keeps the app sidebar (--sidebar-width, set on the shell), so
+     pinning the rail to the viewport's left edge parked it on top of the nav.
+     Sit just inside the content column instead. */
+  left: calc(var(--sidebar-width, 280px) + 20px);
+  width: 214px;
+  max-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  z-index: 20;
+}
+.nb-outline-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.nb-outline-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nb-outline-close { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.nb-outline-list { overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.nb-outline-item {
+  padding: 5px 8px;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nb-outline-item:hover { background: var(--bg-card); color: var(--text-primary); border-left-color: var(--accent); }
+.nb-outline-l2 { padding-left: 18px; font-size: 12px; }
+.nb-outline-l3 { padding-left: 28px; font-size: 11.5px; color: var(--text-muted); }
+@media (max-width: 1279px) {
+  .nb-outline {
+    left: 16px;
+    z-index: 60;
+    box-shadow: var(--shadow-lg, 0 18px 44px rgba(0, 0, 0, 0.28));
+    background: var(--bg-card, var(--surface-soft));
+  }
+}
+@media (max-width: 720px) {
+  .nb-outline { display: none; }
+  .nb-outline-toggle { display: none; }
+}
+
+/* Recent notes strip */
+.nb-recent { display: flex; align-items: center; gap: 12px; margin: -4px 0 16px; }
+.nb-recent-label {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+}
+.nb-recent-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.nb-recent-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 220px;
+  padding: 5px 11px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-soft); color: var(--text-secondary); font-size: 12.5px; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nb-recent-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+
+/* Template picker chips */
+.nb-template-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.nb-template-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.1); color: var(--accent-strong);
+  font-size: 10.5px; font-weight: 650;
+}
+
+/* Circuit block stats + actions */
+.nb-circuit-stats {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+}
+.nb-circuit-stat {
+  padding: 3px 10px; border-radius: 999px; background: var(--surface-soft);
+  color: var(--text-secondary); font-size: 12px;
+}
+.nb-circuit-stat strong { color: var(--text-primary); font-weight: 750; }
+.nb-circuit-stat-muted { color: var(--text-muted); }
+.nb-circuit-stat-action {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer;
+}
+.nb-circuit-stat-action:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+/* Code block: collapsible output + status pill */
+.nb-code-output-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  border: 0; background: transparent; color: var(--text-secondary);
+  cursor: pointer; text-align: left; font: inherit;
+}
+.nb-code-output-label { font-size: 12px; color: var(--text-muted); }
+.nb-code-output-spacer { flex: 1 1 auto; }
+.nb-code-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+}
+.nb-code-status-ok { background: rgba(var(--success-rgb), 0.14); color: var(--success); }
+.nb-code-status-error { background: rgba(var(--danger-rgb), 0.14); color: var(--danger); }
+
+/* Search-hit highlight on note cards */
+.nb-hit { background: rgba(var(--accent-rgb), 0.28); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* ── Notebook: Monaco code editor shell ────────────────────────────────────── */
+.nb-code-editor-monaco {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--surface-code); /* matches the Monaco canvas so corners don't flash */
+}
+
+/* ── Notebook: save-state hint tones ───────────────────────────────────────── */
+.nb-saved-hint.nb-saved-saving { color: var(--accent); }
+.nb-saved-hint.nb-saved-saved { color: var(--text-muted); }
+.nb-saved-hint.nb-saved-error { color: var(--danger); font-weight: 650; }
+
+/* ── Notebook: toasts ──────────────────────────────────────────────────────── */
+.nb-toast-host {
+  position: fixed; z-index: 4000; right: 20px; bottom: 20px;
+  display: flex; flex-direction: column; gap: 10px; max-width: min(92vw, 380px);
+}
+.nb-toast {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 12px 11px 13px; border-radius: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border); backdrop-filter: blur(14px);
+  box-shadow: 0 12px 34px rgba(var(--shadow-ink-rgb), 0.42);
+  color: var(--text-primary); font-size: 13px; line-height: 1.4;
+  animation: nb-toast-in 0.18s ease;
+}
+.nb-toast-icon { flex: 0 0 auto; margin-top: 1px; }
+.nb-toast-msg { flex: 1 1 auto; }
+.nb-toast-close {
+  flex: 0 0 auto; border: 0; background: transparent; color: var(--text-muted);
+  cursor: pointer; padding: 0; line-height: 0; margin-top: 1px;
+}
+.nb-toast-close:hover { color: var(--text-primary); }
+/* Inline action (e.g. "Undo" on a delete) — the primary thing in the toast. */
+.nb-toast-action {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+  font: inherit;
+  font-weight: 700;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.nb-toast-action:hover { border-color: var(--accent); background: var(--bg-card); }
+.nb-toast-success { border-color: rgba(var(--success-rgb), 0.5); }
+.nb-toast-success .nb-toast-icon { color: var(--success); }
+.nb-toast-error { border-color: rgba(var(--danger-rgb), 0.5); }
+.nb-toast-error .nb-toast-icon { color: var(--danger); }
+.nb-toast-info .nb-toast-icon { color: var(--accent-strong); }
+
+/* ── Notebook: confirm dialog ──────────────────────────────────────────────── */
+.nb-confirm-backdrop {
+  position: fixed; inset: 0; z-index: 4100;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: var(--scrim); backdrop-filter: blur(4px);
+  animation: nb-toast-in 0.14s ease;
+}
+.nb-confirm {
+  width: min(100%, 420px); padding: 22px 22px 18px;
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--surface-overlay); box-shadow: 0 24px 60px rgba(var(--shadow-ink-rgb), 0.5);
+}
+.nb-confirm-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 10px; margin-bottom: 12px;
+}
+.nb-confirm-glyph-danger { background: rgba(var(--danger-rgb), 0.14); color: var(--danger); }
+.nb-confirm-title { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.nb-confirm-message { margin: 0 0 18px; font-size: 13.5px; line-height: 1.5; color: var(--text-secondary); }
+.nb-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.nb-confirm-cancel, .nb-confirm-ok {
+  padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border);
+}
+.nb-confirm-cancel { background: transparent; color: var(--text-secondary); }
+.nb-confirm-cancel:hover { border-color: var(--accent); color: var(--text-primary); }
+.nb-confirm-ok { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.nb-confirm-ok.is-danger { background: var(--danger); border-color: var(--danger); color: var(--on-accent); }
+.nb-confirm-ok:hover { filter: brightness(1.08); }
+
+/* ── Notebook: backlinks panel ─────────────────────────────────────────────── */
+.nb-backlinks {
+  margin: 28px 0 8px; padding: 16px 18px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: rgba(var(--accent-rgb), 0.04);
+}
+.nb-backlinks-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.nb-backlinks-count {
+  padding: 1px 8px; border-radius: 999px; background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent-strong); font-size: 11px;
+}
+.nb-backlinks-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nb-backlink {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-soft); color: var(--text-primary);
+  cursor: pointer; text-align: left; font: inherit;
+}
+.nb-backlink:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
+.nb-backlink-title { flex: 1 1 auto; font-size: 13.5px; font-weight: 600; }
+.nb-backlink-folder {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; color: var(--text-muted);
+}
+
+/* ── Notebook: storage-full warning banner ─────────────────────────────────── */
+.nb-storage-warn {
+  display: flex; align-items: center; gap: 10px; margin: 4px 0 18px;
+  padding: 11px 14px; border-radius: 12px;
+  border: 1px solid var(--warning-border); background: var(--warning-soft);
+  color: var(--text-secondary); font-size: 13px;
+}
+.nb-storage-warn > svg { flex: 0 0 auto; color: var(--warning); }
+/* Same shape as the storage warning, but informational rather than urgent. */
+.nb-local-only {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+.nb-local-only > svg { color: var(--text-muted); }
+.nb-storage-warn-action {
+  border: 0; background: transparent; padding: 0 0 0 4px;
+  color: var(--accent-strong); font: inherit; font-weight: 650; cursor: pointer; text-decoration: underline;
+}
+
+/* ── Notebook: single-document editor ──────────────────────────────────────── */
+.nb-doc { margin-top: 6px; }
+
+.nb-editor-skeleton {
+  min-height: 55vh;
+  margin-top: 6px;
+  border-radius: 14px;
+  background:
+    linear-gradient(var(--surface-soft) 22px, transparent 0) 0 0,
+    linear-gradient(var(--surface-soft) 14px, transparent 0) 0 46px,
+    linear-gradient(var(--surface-soft) 14px, transparent 0) 0 78px,
+    linear-gradient(var(--surface-soft) 14px, transparent 0) 0 110px;
+  background-repeat: no-repeat;
+  background-size: 55% 22px, 92% 14px, 88% 14px, 70% 14px;
+  animation: nb-skeleton-pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-editor-skeleton { animation: none; }
+}
+.nb-doc-content { width: 100%; }
+.nb-doc-prose { min-height: 55vh; outline: none; }
+.nb-doc-prose:focus { outline: none; }
+/* Give embedded code/circuit nodes breathing room within the prose flow. */
+.nb-doc-prose > .nb-nodeview { margin: 22px 0; }
+
+/* Node-view chrome (code / circuit blocks embedded in the document). The hover
+   toolbar floats just above the card edge so it never overlaps the block's own
+   toolbar. */
+/* Embedded code/circuit chrome stays in the app sans font, not the prose serif. */
+.nb-nodeview { position: relative; font-family: var(--font-sans); }
+.nb-nodeview-gutter {
+  position: absolute; top: -13px; right: 12px; z-index: 3;
+  display: flex; gap: 4px; opacity: 0; transition: opacity 0.14s ease;
+  pointer-events: none;
+}
+.nb-nodeview:hover .nb-nodeview-gutter,
+.nb-nodeview.ProseMirror-selectednode .nb-nodeview-gutter { opacity: 1; pointer-events: auto; }
+.nb-nodeview-handle, .nb-nodeview-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface-overlay);
+  color: var(--text-muted); cursor: pointer; box-shadow: 0 4px 12px rgba(var(--shadow-ink-rgb), 0.3);
+}
+.nb-nodeview-handle { cursor: grab; }
+.nb-nodeview-handle:hover { color: var(--text-primary); border-color: var(--accent); }
+.nb-nodeview-del:hover { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.6); }
+.nb-nodeview.ProseMirror-selectednode {
+  outline: 2px solid rgba(var(--accent-rgb), 0.5); outline-offset: 4px; border-radius: 12px;
+}
+.nb-nodeview-body { position: relative; }
+
+/* ── Notebook: equation editor popover ─────────────────────────────────────── */
+.nb-mathed-backdrop {
+  position: fixed; inset: 0; z-index: 4200;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: var(--scrim); backdrop-filter: blur(4px);
+  animation: nb-toast-in 0.14s ease;
+}
+.nb-mathed {
+  width: min(100%, 540px); padding: 18px;
+  border-radius: 16px; border: 1px solid var(--border);
+  background: var(--bg-card); box-shadow: 0 24px 60px rgba(var(--shadow-ink-rgb), 0.5);
+}
+.nb-mathed-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.nb-mathed-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.nb-mathed-kind {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--accent-strong); padding: 2px 8px; border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.12);
+}
+.nb-mathed-preview {
+  min-height: 62px; display: flex; align-items: center; justify-content: center;
+  padding: 12px 14px; margin-bottom: 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-soft);
+  overflow-x: auto; color: var(--text-primary);
+}
+.nb-mathed-preview.is-error { border-color: rgba(var(--danger-rgb), 0.4); }
+.nb-mathed-preview-empty { color: var(--text-muted); font-size: 13px; font-style: italic; }
+.nb-mathed-input {
+  width: 100%; resize: vertical; box-sizing: border-box;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-soft);
+  color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; line-height: 1.5;
+}
+.nb-mathed-input:focus { outline: none; border-color: var(--accent); }
+.nb-mathed-symbols {
+  display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 12px 0 4px;
+  max-height: 132px; overflow-y: auto;
+}
+.nb-mathed-symgroup { display: flex; flex-wrap: wrap; gap: 4px; }
+.nb-mathed-sym {
+  min-width: 30px; height: 30px; padding: 0 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer;
+}
+.nb-mathed-sym:hover { border-color: var(--accent); color: var(--text-primary); background: rgba(var(--accent-rgb), 0.08); }
+.nb-mathed-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.nb-mathed-spacer { flex: 1 1 auto; }
+.nb-mathed-del {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+}
+.nb-mathed-del:hover { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.5); }
+.nb-mathed-cancel {
+  padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+}
+.nb-mathed-cancel:hover { color: var(--text-primary); border-color: var(--accent); }
+.nb-mathed-ok {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 650; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent);
+}
+.nb-mathed-ok:hover { filter: brightness(1.08); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Notebook: quiet dashboard chrome
+   The list page had four gradient stat cards, three rows of filter chips and a
+   tips banner stacked above the notes. Everything below trades that for one
+   stat line, one Filters disclosure, and a first-run empty state that offers
+   the three starters directly.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.nb-stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: -2px 0 18px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.nb-stat-line strong {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+/* Filters disclosure ------------------------------------------------------- */
+
+.nb-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* The active pill already paints itself with --accent, so the badge on it has
+   to invert rather than repeat the same fill. */
+.nb-filter-pill.is-active .nb-filter-count {
+  background: var(--text-inverse);
+  color: var(--accent-strong);
+}
+
+.nb-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 10px 6px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.nb-active-filter:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.nb-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: -10px 0 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.nb-filter-section {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.nb-filter-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 92px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nb-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  flex: 1;
+}
+
+.nb-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nb-filter-clear:hover { color: var(--text-primary); }
+
+/* First-run empty state ---------------------------------------------------- */
+
+.nb-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 46px 24px 40px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.07), rgba(var(--tint-rgb), 0.01));
+}
+
+.nb-empty-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nb-empty-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3vw, 29px);
+  font-weight: 800;
+}
+
+.nb-empty-lead {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.nb-empty-starters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin-top: 10px;
+}
+
+.nb-empty-starter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.nb-empty-starter:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.nb-empty-starter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong);
+}
+
+.nb-empty-starter-label {
+  color: var(--text-primary);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.nb-empty-starter-desc {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.nb-empty-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 620px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.nb-empty-hints li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.nb-empty-hints li > svg { color: var(--text-muted); flex: none; }
+
+.nb-empty-hints code {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+  font-size: 12px;
+}
+
+.nb-empty-more {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nb-empty-more:hover { color: var(--text-primary); }
+@media (max-width: 760px) {
+  .nb-empty-hints li { align-items: flex-start; flex-wrap: wrap; }
+  .nb-filter-section { flex-direction: column; align-items: stretch; }
+}
+
+/* Note page: grouped menu + report-mode actions ---------------------------- */
+
+.nb-more-label {
+  display: block;
+  padding: 7px 10px 4px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nb-topbar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.nb-topbar-action:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.nb-topbar-action:disabled { opacity: 0.55; cursor: default; }
+
+/* ══════════════════ FOCUS MODE ══════════════════
+   A distraction-free surface for writing: the topbar, folder/tag row, backlinks
+   and outline all hide, and the note settles onto a narrower measure with the
+   title still there but softer. The floating exit chip is the one control that
+   remains on screen, so nobody has to remember the shortcut to get back.
+   Toggle: Ctrl+. or the Maximize button in the topbar. Exit: Esc or the chip. */
+.nb-note-page.is-focus .nb-note-topbar,
+.nb-note-page.is-focus .nb-note-organizer,
+.nb-note-page.is-focus .nb-attach-chip-row,
+.nb-note-page.is-focus .nb-backlinks-panel,
+.nb-note-page.is-focus .nb-outline-panel {
+  display: none;
+}
+
+.nb-note-page.is-focus {
+  max-width: 760px;
+  margin-inline: auto;
+  padding-top: 56px;
+}
+
+.nb-note-page.is-focus .nb-note-title {
+  font-size: 2rem;
+}
+
+.nb-focus-exit {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.nb-focus-exit:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+
+/* Reading-time chip, sat beside the word count. Same shape as the count,
+   with a muted tone so it does not compete with it for attention. */
+.nb-topbar-read {
+  opacity: 0.85;
+}
+
+/* ══════════════════ VIEW MODE TOGGLE ══════════════════
+   Grid vs. compact list. The pair sits inside the controls row like the
+   filter pill, so the two second-axis controls read as one group. */
+.nb-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 2px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.nb-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.nb-view-btn:hover {
+  color: var(--text-primary);
+}
+.nb-view-btn.is-active {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.35);
+}
+
+/* Compact list layout: same cards, one column, tighter padding, snippet stays
+   but badges and tags line up on one row so a screen can hold twelve rows
+   without scrolling. Grid layout keeps the existing behaviour. */
+.nb-grid.nb-view-list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.nb-grid.nb-view-list .nb-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head  actions"
+    "title actions"
+    "meta  actions";
+  align-items: center;
+  padding: 12px 14px;
+  gap: 4px 12px;
+}
+.nb-grid.nb-view-list .nb-card-head { grid-area: head; padding: 0; }
+.nb-grid.nb-view-list .nb-card-actions { grid-area: actions; }
+.nb-grid.nb-view-list .nb-card-title { grid-area: title; margin: 0; font-size: 1rem; }
+.nb-grid.nb-view-list .nb-card-snippet {
+  display: none;
+}
+.nb-grid.nb-view-list .nb-card-badges,
+.nb-grid.nb-view-list .nb-card-tags,
+.nb-grid.nb-view-list .nb-card-footer {
+  grid-area: meta;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.nb-grid.nb-view-list .nb-card-footer { color: var(--text-muted); font-size: 0.72rem; }
+
+/* ══════════════════ TABLES ══════════════════
+   TipTap's table extension owns the drag/drop of rows and columns and the
+   column-resizing handles; these rules just style them. Tables live inside
+   .nb-prose so the site's own type tokens apply. */
+.nb-prose table.nb-table,
+.nb-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-md) 0;
+  font-size: 0.92rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.nb-prose th, .nb-prose td {
+  min-width: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+  text-align: left;
+}
+
+.nb-prose th {
+  background: var(--surface-soft);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.nb-prose td { color: var(--text-secondary); }
+
+.nb-prose .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--accent-rgb), 0.12);
+  pointer-events: none;
+}
+.nb-prose th, .nb-prose td { position: relative; }
+
+.nb-prose .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -1px;
+  width: 4px;
+  background: var(--accent);
+  opacity: 0;
+  cursor: col-resize;
+  transition: opacity 0.15s ease;
+}
+.nb-prose table:hover .column-resize-handle { opacity: 0.35; }
+.nb-prose .column-resize-handle:hover { opacity: 1; }
+
+.nb-prose .tableWrapper {
+  overflow-x: auto;
+  margin: var(--space-md) 0;
+}
+
+/* ══════════════════ SKETCH BLOCK ══════════════════
+   Draw pad node view. Editing surface holds the canvas + toolbar; the saved
+   view is just an image. */
+.nb-sketch {
+  margin: var(--space-md) 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.nb-sketch-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.nb-sketch-view-tools {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.nb-sketch-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.nb-sketch-tool:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.nb-sketch-tool.is-active {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nb-sketch-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.nb-sketch-primary:hover {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.nb-sketch-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.nb-sketch-spacer { flex: 1; }
+
+.nb-sketch-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.nb-sketch-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ══════════════════ DATA PLOT BLOCK ══════════════════
+   Left: data editor. Right: SVG chart. On narrow viewports the two stack. */
+.nb-plot {
+  margin: var(--space-md) 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.nb-plot-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .nb-plot-body { grid-template-columns: 1fr; }
+}
+
+.nb-plot-editor { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.nb-plot-fields { display: flex; flex-direction: column; gap: 6px; }
+.nb-plot-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.nb-plot-input {
+  padding: 5px 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+}
+.nb-plot-input:focus { outline: none; border-color: var(--accent); }
+
+.nb-plot-kinds { display: inline-flex; gap: 4px; }
+.nb-plot-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  padding: 4px 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nb-plot-kind:hover { color: var(--text-primary); }
+.nb-plot-kind.is-active {
+  background: rgba(var(--accent-rgb), 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.nb-plot-data {
+  width: 100%;
+  min-height: 140px;
+  padding: 8px 10px;
+  background: var(--surface-code);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nb-plot-data:focus { outline: none; border-color: var(--accent); }
+
+.nb-plot-errors {
+  margin: 0;
+  color: var(--danger);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.nb-plot-render {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.nb-plot-empty {
+  padding: 24px 16px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  text-align: center;
+  max-width: 34ch;
+  line-height: 1.5;
+}
+
+.nb-plot-svg { width: 100%; height: auto; max-height: 260px; }
+.nb-plot-title { fill: var(--text-primary); font-family: var(--font-sans); font-size: 12px; font-weight: 700; }
+.nb-plot-axis { stroke: #1a1a1a; stroke-width: 1; opacity: 0.6; }
+.nb-plot-grid { stroke: #1a1a1a; stroke-width: 0.5; opacity: 0.1; }
+.nb-plot-tick { fill: #4a4a4a; font-family: var(--font-mono); font-size: 9px; }
+.nb-plot-label { fill: #2a2a2a; font-family: var(--font-sans); font-size: 10px; font-weight: 600; }
+.nb-plot-line { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+.nb-plot-bar { fill: var(--accent); opacity: 0.85; }
+.nb-plot-point { fill: var(--accent); }
+
+.nb-plot-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.nb-plot-toggle {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nb-plot-toggle:hover { color: var(--text-primary); border-color: var(--accent); }
+
+.nb-plot-count { flex: 1; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.72rem; }
+
+.nb-plot-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.nb-plot-remove:hover { color: var(--danger); border-color: var(--danger); }
+
+/* ══════════════════ SHORTCUTS GROUPS ══════════════════ */
+.nb-shortcuts-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+  padding: 0;
+}
+.nb-shortcuts-group { display: block; }
+.nb-shortcuts-title {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Print styles for the new blocks */
+.nb-print-sketch {
+  display: block;
+  max-width: 100%;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  margin-top: 6px;
+}
