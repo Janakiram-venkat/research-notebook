@@ -1,0 +1,134 @@
+/* Dark theme: the same token names as tokens.css with night values, switched on
+   by <html data-theme="dark"> (see lib/theme.js).
+
+   The ladder keeps its direction: the page floor is the darkest step and a raised
+   card is a little lighter, so elevation still reads as "closer". Ink is a warm
+   off-white (never #FFF on #000), and the accent is lifted so it clears 4.5:1 on a
+   dark card. Sketches and plots keep their white paper on purpose: they are drawn
+   in dark ink. */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-primary: #0E1018;
+  --bg-secondary: #12151F;
+  --bg-card: #171A26;
+  --surface-soft: #1C2030;
+  --surface-muted: #232839;
+  --border: #2C3246;
+  --border-strong: #3A4159;
+  --border-hover: #4E5A80;
+  --border-light: #2C3246;
+  --rule: #262B3D;
+
+  --surface-canvas: #141724;
+  --surface-code: #12151F;
+  --surface-code-text: #E3E6F2;
+  --surface-overlay: #1C2030;
+
+  --text-primary: #E8EAF4;
+  --text-secondary: #B9BED3;
+  --text-muted: #8E95B0;
+  --text-inverse: #0E1018;
+  --on-accent: #FFFFFF;
+
+  --accent: #7C8CFF;
+  --accent-strong: #A3AEFF;
+  --accent-electric: #8E9BFF;
+  --accent-dim: rgba(124, 140, 255, 0.14);
+  --accent-rgb: 124, 140, 255;
+  --cta: #5B6CFF;
+  --cta-strong: #7C8CFF;
+  --cta-dim: rgba(124, 140, 255, 0.14);
+  --cta-rgb: 124, 140, 255;
+
+  --success: #3DD6B5;
+  --success-soft: rgba(61, 214, 181, 0.12);
+  --success-border: rgba(61, 214, 181, 0.32);
+  --success-rgb: 61, 214, 181;
+  --warning: #F0B456;
+  --warning-soft: rgba(240, 180, 86, 0.12);
+  --warning-border: rgba(240, 180, 86, 0.32);
+  --danger: #FF7A6E;
+  --danger-soft: rgba(255, 122, 110, 0.12);
+  --danger-border: rgba(255, 122, 110, 0.34);
+  --signal: #4CC9E6;
+  --signal-soft: rgba(76, 201, 230, 0.12);
+  --signal-border: rgba(76, 201, 230, 0.32);
+
+  --viz-1: #7C8CFF;
+  --viz-2: #4CC9E6;
+  --viz-3: #A3AEFF;
+  --viz-4: #F0B456;
+  --viz-5: #B79CFF;
+  --viz-6: #9AA3B8;
+
+  --topbar-bg: #12151F;
+  --sidebar-bg: #12151F;
+  --sidebar-footer-bg: #0E1018;
+  --content-bg: #0E1018;
+  --soft-hover: #222739;
+  --scrollbar-thumb: #3A4159;
+  --selection: rgba(124, 140, 255, 0.32);
+  --highlight: rgba(255, 255, 255, 0.06);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --grid-dot: rgba(200, 210, 255, 0.06);
+  --glass-bg: rgba(18, 21, 31, 0.82);
+  --glass-border: rgba(200, 210, 255, 0.08);
+  --mark-bg: rgba(250, 204, 21, 0.28);
+  --mark-text: #FFF4C2;
+
+  --syn-keyword: #8EA2FF;
+  --syn-class: #4CC9E6;
+  --syn-function: #C3A6FF;
+  --syn-string: #F2A27A;
+  --syn-number: #F0B456;
+  --syn-comment: #7D869E;
+  --syn-operator: #AEB6CC;
+  --lesson-code-bg: #12151F;
+  --lesson-code-text: #E3E6F2;
+
+  --sheet: #171A26;
+  --sheet-rule: #2C3246;
+  --bill-night: #E8EAF4;
+
+  /* Used by the mind map, graph and diagram blocks. */
+  --mm-node: #1C2030;
+  --mm-ink: #E8EAF4;
+  --mm-fold: #171A26;
+  --graph-paper: #12151F;
+  --graph-halo-stroke: #171A26;
+}
+
+/* Light values for the tokens only the new blocks use. */
+:root {
+  --mm-node: #FFFFFF;
+  --mm-ink: #0B0F2A;
+  --mm-fold: #FFFFFF;
+  --graph-paper: #FCFDFE;
+  --graph-halo-stroke: #FFFFFF;
+}
+
+:root[data-theme="dark"] body { background: var(--bg-primary); color: var(--text-primary); }
+:root[data-theme="dark"] ::selection { background: var(--selection); }
+:root[data-theme="dark"] img:not([src$=".svg"]) { color-scheme: light; }
+
+/* Mermaid draws in its own palette; diagram.js re-renders with a dark one. The
+   KaTeX output inherits currentColor already. */
+
+/* Tag chips mix their hue at a fixed lightness tuned for white cards; on a dark
+   card the ink has to be light instead. */
+:root[data-theme="dark"] .nb-card-tag,
+:root[data-theme="dark"] .nb-tag { --tag-l: 76%; --tag-bg-a: 0.18; }
+:root[data-theme="dark"] .nb-card-tag { background: hsl(var(--tag-hue, 217) 55% 50% / 0.18); }
+
+/* Filled buttons keep white text, so they sit on a deeper blue than the accent
+   used for links and focus rings (white on #5B6CFF is about 4.2:1). */
+:root[data-theme="dark"] .nb-new-btn:not(.nb-new-btn-secondary),
+:root[data-theme="dark"] .account-primary,
+:root[data-theme="dark"] .tour-next,
+:root[data-theme="dark"] .agent-send,
+:root[data-theme="dark"] .nb-run-btn,
+:root[data-theme="dark"] .nb-mm-toolbar button.is-primary { background: #5B6CFF; color: #FFFFFF; }
+:root[data-theme="dark"] .nb-new-btn:not(.nb-new-btn-secondary):hover,
+:root[data-theme="dark"] .account-primary:hover:not(:disabled) { background: #4A5BF0; }

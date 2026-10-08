@@ -1,4 +1,4 @@
-// RunnableCode — an atom block node holding editable, executable quantum code
+// RunnableCode — an atom block node holding editable, executable code
 // inside the single-document note editor. Its attributes (framework, code, and
 // the last run result) live only in the ProseMirror JSON; the note's stored
 // block-array keeps a separate `code` block for each of these (see docBlocks.js),
@@ -20,7 +20,7 @@ export const RunnableCode = Node.create({
     // rendered:false keeps large/structured attrs (code, run result) out of the
     // DOM — storage is JSON via getJSON(), not serialized HTML.
     return {
-      framework: { default: 'qiskit', rendered: false },
+      framework: { default: 'python', rendered: false },
       code: { default: '', rendered: false },
       lastResult: { default: null, rendered: false },
     }

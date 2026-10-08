@@ -4,22 +4,22 @@ import {
   ArrowLeft, Trash2, Plus, X, Check,
   Folder, Copy, Star, Download, Printer, ClipboardCheck, MoreHorizontal,
   ListTree, Command, Keyboard, FileText, History, Save, Link2, Link2Off,
-  FlaskConical, Share2, PenLine, Maximize2, Minimize2,
+  FlaskConical, Share2, PenLine, Maximize2, Minimize2, Bot,
 } from 'lucide-react'
+import { AGENT_PRESETS, askAgent } from '../lib/agentPresets.js'
+import { layoutMindMap, mindMapToMarkdown, normalizeMindMap } from '../lib/notebook/mindmap.js'
+import MindMapSvg from '../components/notebook/MindMapSvg.jsx'
 import {
   getNote, createNote, updateNote, deleteNote, duplicateNote, restoreNote,
   allFolders, allTags, listNotes, pushRecentNote, syncWithRemote, fetchNoteRemote, DEFAULT_FOLDER,
 } from '../lib/notebook/notebookStore.js'
 import { TEMPLATES } from '../lib/notebook/templates.js'
-import { extractOutline, tagColor, findBacklinks, circuitBlockToMarkdown } from '../lib/notebook/noteUtils.js'
-import { portableToCircuit } from '../lib/quantum/persistence.js'
+import { extractOutline, tagColor, findBacklinks } from '../lib/notebook/noteUtils.js'
 import MarkdownView from '../components/notebook/MarkdownView.jsx'
-import NotebookCircuitView from '../components/notebook/NotebookCircuitView.jsx'
 import CommandPalette from '../components/notebook/CommandPalette.jsx'
 import OutlinePanel from '../components/notebook/OutlinePanel.jsx'
 import ShortcutsHelp from '../components/notebook/ShortcutsHelp.jsx'
 import BacklinksPanel from '../components/notebook/BacklinksPanel.jsx'
-import SyncStatus from '../components/notebook/SyncStatus.jsx'
 import HistoryPanel from '../components/notebook/HistoryPanel.jsx'
 import { saveVersion, maybeSaveDailyVersion } from '../lib/notebook/versions.js'
 import { resolveAttachment } from '../lib/notebook/attachments.js'
@@ -73,13 +73,18 @@ function noteToMarkdown(note) {
       continue
     }
 
-    if (block.type === 'circuit') {
-      lines.push(circuitBlockToMarkdown({ name: block.name, data: block.data }))
+    if (block.type === 'sketch' && block.src) {
+      lines.push(`![Sketch](${block.src})`)
       continue
     }
 
-    if (block.type === 'sketch' && block.src) {
-      lines.push(`![Sketch](${block.src})`)
+    if (block.type === 'mindmap') {
+      lines.push(mindMapToMarkdown(normalizeMindMap(block.root)))
+      continue
+    }
+
+    if (block.type === 'diagram') {
+      lines.push('```mermaid', block.code || '', '```')
       continue
     }
 
@@ -100,12 +105,12 @@ function noteToMarkdown(note) {
 }
 
 function safeFilename(title) {
-  return (title || 'quantum-note')
+  return (title || 'note')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-    .slice(0, 60) || 'quantum-note'
+    .slice(0, 60) || 'note'
 }
 
 function deriveTitleFromContent(content = []) {
@@ -121,14 +126,6 @@ function deriveTitleFromContent(content = []) {
   return ''
 }
 
-function safePortableToCircuit(data) {
-  try {
-    return data ? portableToCircuit(data) : null
-  } catch {
-    return null
-  }
-}
-
 // Print-only mirror of the note. It stays mounted (see the render site) so the
 // browser's native print works, and is memoized + fed a deferred note so
 // re-rendering it never blocks typing in the editor.
@@ -138,7 +135,7 @@ const PrintDocument = memo(function PrintDocument({ note, wordTotal }) {
   return (
     <article className="nb-print-document" aria-hidden="true">
       <header className="nb-print-header">
-        <p>Quantum Codebook Notebook</p>
+        <p>Research Notebook</p>
         <h1>{note.title || 'Untitled note'}</h1>
         <div>
           <span>{note.folder || DEFAULT_FOLDER}</span>
@@ -171,12 +168,20 @@ const PrintDocument = memo(function PrintDocument({ note, wordTotal }) {
           )
         }
 
-        if (block.type === 'circuit') {
-          const circuit = safePortableToCircuit(block.data)
+        if (block.type === 'mindmap') {
           return (
             <section key={block.id} className="nb-print-block">
-              <p className="nb-print-block-label">Circuit{block.name ? ` · ${block.name}` : ''}</p>
-              {circuit ? <NotebookCircuitView circuit={circuit} /> : <p>No circuit imported.</p>}
+              <p className="nb-print-block-label">Mind map</p>
+              <MindMapSvg layout={layoutMindMap(normalizeMindMap(block.root))} />
+            </section>
+          )
+        }
+
+        if (block.type === 'diagram') {
+          return (
+            <section key={block.id} className="nb-print-block">
+              <p className="nb-print-block-label">Diagram</p>
+              <pre className="nb-print-code">{block.code}</pre>
             </section>
           )
         }
@@ -205,8 +210,15 @@ const PrintDocument = memo(function PrintDocument({ note, wordTotal }) {
   )
 })
 
+// The route reuses this page across `:id` changes (wiki-links, backlinks, command
+// palette). Keying the inner component by id remounts it per note, so its state
+// starts from that note instead of being reset by an effect.
 export default function NotebookNote() {
   const { id } = useParams()
+  return <NotebookNoteInner key={id} id={id} />
+}
+
+function NotebookNoteInner({ id }) {
   const navigate = useNavigate()
 
   const [confirm, confirmEl] = useConfirm()
@@ -270,12 +282,12 @@ export default function NotebookNote() {
   // Whether there is anything here worth exporting or publishing. A note is
   // created empty and the reader's first act is to type into it, so offering
   // "Export PDF" and "Share as a report" on that blank page is offering to
-  // hand someone a blank page. Any word, any code, any circuit is enough.
+  // hand someone a blank page. Any word, any code is enough.
   const hasSubstance = useMemo(
     () =>
       wordTotal > 0 ||
       (deferredNote?.content || []).some(
-        (b) => (b.type === 'code' && b.code?.trim()) || (b.type === 'circuit' && b.data),
+        (b) => b.type === 'code' && b.code?.trim(),
       ),
     [deferredNote, wordTotal],
   )
@@ -308,25 +320,14 @@ export default function NotebookNote() {
     if (id) pushRecentNote(id)
   }, [id])
 
-  // The route reuses this component across `:id` changes (wiki-links, backlinks,
-  // command palette), so reload the note when the id actually changes. The
-  // NoteDocument editor is keyed by note.id and remounts with the new content.
+  // A note this browser has not seen (e.g. a link followed on a device that never
+  // opened the dashboard) is looked up remotely once; state already starts right
+  // for a note that exists locally.
   useEffect(() => {
-    // The outgoing note was already flushed by the cleanup above; clear the flag
-    // so a failed flush can't make the incoming note look unsaved and get
-    // rewritten on its first render.
+    // The outgoing note was flushed by the cleanup above; clear the flag so a failed
+    // flush can't make this note look unsaved and get rewritten on first render.
     dirtyRef.current = false
-    const fresh = getNote(id)
-    if (fresh) {
-      setNote(fresh)
-      setCheckingRemote(false)
-      setFolderDraft(fresh.folder || DEFAULT_FOLDER)
-      titleEditedRef.current = false
-      return
-    }
-    // Not found locally — try Supabase once before giving up (see checkingRemote).
-    setNote(null)
-    setCheckingRemote(true)
+    if (getNote(id)) return undefined
     let cancelled = false
     fetchNoteRemote(id).then((remote) => {
       if (cancelled) return
@@ -334,7 +335,6 @@ export default function NotebookNote() {
       if (remote) {
         setNote(remote)
         setFolderDraft(remote.folder || DEFAULT_FOLDER)
-        titleEditedRef.current = false
       }
     })
     return () => { cancelled = true }
@@ -378,6 +378,46 @@ export default function NotebookNote() {
     })
     return () => { cancelled = true }
   }, [id, navigate])
+
+  // The assistant writes to notes on the server; applyRemoteNotes() puts the result
+  // in the local store and fires nb:notes-changed. If the open note was one of them
+  // and there are no unsaved edits here, show the new text now, after snapshotting
+  // the old text so "Undo" (or History) can bring it back.
+  useEffect(() => {
+    let busy = false
+    const onChanged = async () => {
+      if (busy) return
+      const fresh = getNote(id)
+      const cur = noteRef.current
+      if (!fresh || !cur || cur.id !== fresh.id) return
+      if ((fresh.updatedAt || 0) <= (cur.updatedAt || 0)) return
+      if (dirtyRef.current) return
+      busy = true
+      try {
+        await saveVersion(cur, 'pre-agent')
+        setNote(fresh)
+        setFolderDraft(fresh.folder || DEFAULT_FOLDER)
+        setEditorReload((r) => ({ epoch: r.epoch + 1, adoptedId: fresh.id }))
+        toast('The assistant added to this note.', {
+          duration: 9000,
+          action: {
+            label: 'Undo',
+            run: () => {
+              const back = updateNote(id, { title: cur.title, content: cur.content })
+              if (!back) return
+              dirtyRef.current = false
+              setNote(back)
+              setEditorReload((r) => ({ epoch: r.epoch + 1, adoptedId: back.id }))
+            },
+          },
+        })
+      } finally {
+        busy = false
+      }
+    }
+    window.addEventListener('nb:notes-changed', onChanged)
+    return () => window.removeEventListener('nb:notes-changed', onChanged)
+  }, [id])
 
   // The day's first snapshot, taken when the note is opened rather than when it
   // is saved: what someone reaching for history wants back is the note as it was
@@ -751,6 +791,7 @@ export default function NotebookNote() {
       { key: 'exportmd', section: 'This note', title: 'Export .md', Icon: Download, run: exportMarkdown },
       { key: 'exportpdf', section: 'This note', title: 'Export PDF', hint: 'Ctrl+Shift+P', Icon: Printer, run: exportPdf },
       { key: 'outline', section: 'This note', title: showOutline ? 'Hide outline' : 'Show outline', Icon: ListTree, run: () => setShowOutline((o) => !o) },
+      ...AGENT_PRESETS.map((p) => ({ key: `ask-${p.key}`, section: 'This note', title: p.label, Icon: Bot, run: () => askAgent(p) })),
       { key: 'help', section: 'This note', title: 'Keyboard shortcuts', hint: '?', Icon: Keyboard, run: () => setHelpOpen(true) },
       { key: 'delete', section: 'This note', title: 'Delete note', Icon: Trash2, run: handleDeleteNote },
     ]
@@ -813,9 +854,6 @@ export default function NotebookNote() {
         </Link>
         <div className="nb-note-topbar-right">
           <span className={`nb-saved-hint nb-saved-${saveState}`}>{saveLabel}</span>
-          {/* Two separate facts, kept visually separate: the left label is this
-              browser's write, the pill is the server's acknowledgement. */}
-          <SyncStatus />
           <span className="nb-topbar-count">{wordTotal} words</span>
           {readingMin > 0 && (
             <span className="nb-topbar-count nb-topbar-read" title="Reading time at 200 words per minute">
@@ -896,6 +934,13 @@ export default function NotebookNote() {
                   <Copy size={15} /> Duplicate
                 </button>
 
+                <div className="nb-more-sep" />
+                <span className="nb-more-label">Ask the assistant</span>
+                {AGENT_PRESETS.map((p) => (
+                  <button key={p.key} onClick={() => { askAgent(p); setMenuOpen(false) }}>
+                    <Bot size={15} /> {p.label}
+                  </button>
+                ))}
                 {hasSubstance && (
                   <>
                     <div className="nb-more-sep" />

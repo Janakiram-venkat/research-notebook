@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import { getResolvedTheme, onThemeChange } from './theme.js'
 
 /**
  * Monaco theming.
@@ -72,7 +73,8 @@ export function applyMonacoTheme(monaco) {
   const keyword = token(css, '--syn-keyword')
   const cls = token(css, '--syn-class')
   const fn = token(css, '--syn-function')
-  const string = '#A31515'
+  const dark = getResolvedTheme() === 'dark'
+  const string = dark ? '#F2A27A' : '#A31515'
   const number = token(css, '--syn-number')
   const comment = token(css, '--syn-comment')
   const operator = token(css, '--syn-operator')
@@ -88,21 +90,21 @@ export function applyMonacoTheme(monaco) {
   // the whole page — a blank screen caused purely by editor styling. Degrade to
   // Monaco's stock theme instead.
   try {
-    defineQualiumTheme(monaco, { keyword, cls, fn, string, number, comment, operator, bg, fg, accent, muted, border, css })
+    defineQualiumTheme(monaco, { keyword, cls, fn, string, number, comment, operator, bg, fg, accent, muted, border, css, dark })
     monaco.editor.setTheme(QUALIUM_THEME)
   } catch (error) {
     console.error('[editorTheme] falling back to the stock Monaco theme:', error)
-    monaco.editor.setTheme('vs')
+    monaco.editor.setTheme(getResolvedTheme() === 'dark' ? 'vs-dark' : 'vs')
   }
 }
 
 function defineQualiumTheme(monaco, t) {
-  const { keyword, cls, fn, string, number, comment, operator, bg, fg, accent, muted, border, css } = t
+  const { keyword, cls, fn, string, number, comment, operator, bg, fg, accent, muted, border, css, dark } = t
 
   monaco.editor.defineTheme(QUALIUM_THEME, {
     // Inheriting from the built-in light theme means any token type not listed
     // below still lands somewhere sane instead of rendering as plain text.
-    base: 'vs',
+    base: dark ? 'vs-dark' : 'vs',
     inherit: true,
     rules: [
       { token: '', foreground: bare(fg) },
@@ -153,14 +155,20 @@ function defineQualiumTheme(monaco, t) {
  *   <Editor beforeMount={beforeMount} theme={theme} … />
  *
  * `beforeMount` registers the theme before the editor's first paint, so there
- * is no flash of the stock palette. There is one palette and it cannot change
- * at runtime, so registering once per editor is all this needs; it used to
- * carry an effect that re-registered on every theme flip.
+ * is no flash of the stock palette. When the reader switches light/dark, the
+ * effect re-registers it from the new tokens.
  */
+let lastMonaco = null
+
 export function useMonacoTheme() {
   const beforeMount = useCallback(monaco => {
+    lastMonaco = monaco
     applyMonacoTheme(monaco)
   }, [])
+
+  // Light/dark switch: re-read the tokens and redefine the theme. Monaco themes
+  // are global, so every open editor follows.
+  useEffect(() => onThemeChange(() => { if (lastMonaco) applyMonacoTheme(lastMonaco) }), [])
 
   return { beforeMount, theme: QUALIUM_THEME }
 }

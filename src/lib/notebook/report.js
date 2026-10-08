@@ -15,7 +15,6 @@
 export const REPORT_SECTIONS = [
   { key: 'objective', label: 'Objective' },
   { key: 'method', label: 'Method' },
-  { key: 'circuit', label: 'Circuit' },
   { key: 'code', label: 'Code' },
   { key: 'result', label: 'Result' },
   { key: 'interpretation', label: 'Interpretation' },
@@ -28,7 +27,6 @@ export const REPORT_SECTIONS = [
 const SYNONYMS = {
   objective: ['objective', 'objectives', 'abstract', 'aim', 'aims', 'goal', 'goals', 'purpose', 'question', 'hypothesis', 'background', 'introduction'],
   method: ['method', 'methods', 'methodology', 'procedure', 'approach', 'setup', 'set-up', 'experiment', 'what i did', 'steps'],
-  circuit: ['circuit', 'circuits', 'circuit design', 'diagram'],
   code: ['code', 'code & data', 'code and data', 'implementation', 'program', 'script'],
   result: ['result', 'results', 'data', 'measurements', 'output', 'outputs', 'observations', 'findings'],
   interpretation: ['interpretation', 'analysis', 'discussion', 'what it means', 'why', 'explanation'],
@@ -93,9 +91,9 @@ function splitByHeadings(markdown, { dropFirstH1 = false } = {}) {
  * `{ key, label, blocks }` and `blocks` reuses the note's own block shapes so
  * the same renderers work on both.
  *
- * Code and circuit blocks are always collected into the Code and Circuit
- * sections, wherever they sat in the note. That is the "fixed frame" doing its
- * job: a reader wants the circuit and the program in one place each. It does
+ * Code blocks are always collected into the Code section, wherever they sat
+ * in the note. That is the "fixed frame" doing its job: a reader wants the
+ * program in one place. It does
  * cost the interleaving of a note that alternates prose and code, which is the
  * deliberate trade — report mode is a second view, never the editing surface.
  */
@@ -106,10 +104,6 @@ export function buildReport(note) {
   let firstTextSeen = false
 
   for (const block of note?.content || []) {
-    if (block.type === 'circuit') {
-      bySection.get('circuit').push(block)
-      continue
-    }
     if (block.type === 'code') {
       bySection.get('code').push(block)
       continue
@@ -151,18 +145,18 @@ export function buildReport(note) {
   }
 }
 
-// Sections whose absence is worth mentioning. Circuit and Code are legitimately
-// missing from plenty of good write-ups — a theory note has neither — so
+// Sections whose absence is worth mentioning. Code is legitimately
+// missing from plenty of good write-ups — a theory note has none — so
 // nagging about them would train people to ignore the hint entirely.
 const NUDGE_ORDER = ['objective', 'method', 'result', 'interpretation', 'conclusion']
 
 const NUDGES = {
   objective: 'No objective yet, what question was this run meant to answer?',
-  method: 'No method yet, what circuit or procedure produced this?',
-  result: 'No result yet, what did the run actually output?',
+  method: 'No method yet, what procedure produced this?',
+  result: 'No result yet, what did it actually produce?',
   interpretation:
     'No interpretation yet, this is the section that turns a result into an explanation, and the one most often skipped.',
-  conclusion: 'No conclusion yet, did the result match the prediction?',
+  conclusion: 'No conclusion yet, did the result match what you expected?',
 }
 
 /**
@@ -195,8 +189,6 @@ export function reportToMarkdown(report) {
         if (block.lastResult?.output) {
           lines.push('', 'Output:', '```', block.lastResult.output, '```')
         }
-      } else if (block.type === 'circuit') {
-        lines.push(`_Circuit${block.name ? `: ${block.name}` : ''}_`)
       }
     }
   }

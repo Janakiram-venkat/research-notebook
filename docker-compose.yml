@@ -1,0 +1,16 @@
+# Local run:      docker compose up --build            -> http://localhost:8000
+# Production:     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  notebook:
+    build: .
+    ports: ["8000:8000"]
+    env_file: backend/.env
+    environment:
+      NB_AUTH_MODE: accounts
+      NB_DB_PATH: /data/notebook.db
+    volumes:
+      - nbdata:/data
+    restart: unless-stopped
+
+volumes:
+  nbdata:

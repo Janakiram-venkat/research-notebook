@@ -8,19 +8,7 @@
 
 import { FlaskConical, TriangleAlert } from 'lucide-react'
 import MarkdownView from './MarkdownView.jsx'
-import NotebookCircuitView from './NotebookCircuitView.jsx'
-import { portableToCircuit } from '../../lib/quantum/persistence.js'
 import { reportHints } from '../../lib/notebook/report.js'
-
-function safeCircuit(data) {
-  try {
-    return data ? portableToCircuit(data) : null
-  } catch {
-    // A circuit saved by an older format version shouldn't take the report down
-    // with it — the rest of the write-up is still worth reading.
-    return null
-  }
-}
 
 function ReportBlock({ block }) {
   if (block.type === 'text') return <MarkdownView markdown={block.markdown || ''} />
@@ -48,16 +36,6 @@ function ReportBlock({ block }) {
             ))}
           </div>
         )}
-      </div>
-    )
-  }
-
-  if (block.type === 'circuit') {
-    const circuit = safeCircuit(block.data)
-    return (
-      <div className="nb-report-circuit">
-        {circuit ? <NotebookCircuitView circuit={circuit} /> : <p className="nb-report-sublabel">No circuit imported.</p>}
-        {block.name && <p className="nb-report-sublabel">{block.name}</p>}
       </div>
     )
   }

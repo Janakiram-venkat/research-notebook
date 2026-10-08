@@ -2,30 +2,26 @@
 // so blocks get unique ids on every creation. Templates are seed content only —
 // after creation, every note behaves the same in the editor.
 
-import { textBlock, codeBlock, circuitBlock, DEFAULT_FOLDER } from './notebookStore.js'
+import { textBlock, codeBlock, newId, DEFAULT_FOLDER } from './notebookStore.js'
+import { mmNode } from './mindmap.js'
 
-const BELL_CIRCUIT = {
-  n: 2,
-  i: ['|0>', '|0>'],
-  g: [
-    { t: 'H', tg: [0], c: [], col: 0 },
-    { t: 'CX', tg: [1], c: [0], col: 1 },
-    { t: 'MEASURE', tg: [0], c: [], col: 2 },
-    { t: 'MEASURE', tg: [1], c: [], col: 2 },
-  ],
-}
+// Visual blocks for templates: fresh ids every build, like textBlock/codeBlock.
+const mindMapBlock = (root) => ({ id: newId('b'), type: 'mindmap', root })
+const diagramBlock = (code) => ({ id: newId('b'), type: 'diagram', code })
 
-const BELL_QISKIT = `from qiskit import QuantumCircuit
-from qiskit_aer import AerSimulator
+const PY_SCRATCH = `# Try something. Ctrl+Enter runs the block.
+data = [3, 1, 4, 1, 5, 9, 2, 6]
 
-qc = QuantumCircuit(2, 2)
-qc.h(0)
-qc.cx(0, 1)
-qc.measure([0, 1], [0, 1])
+print("n      =", len(data))
+print("mean   =", sum(data) / len(data))
+print("sorted =", sorted(data))
+`
 
-sim = AerSimulator()
-counts = sim.run(qc, shots=1024).result().get_counts()
-print(counts)
+const JS_SCRATCH = `// JavaScript runs in a sandboxed worker. Top-level await works.
+const data = [3, 1, 4, 1, 5, 9, 2, 6]
+const mean = data.reduce((a, b) => a + b, 0) / data.length
+
+console.log({ n: data.length, mean })
 `
 
 export const TEMPLATES = [
@@ -43,16 +39,16 @@ export const TEMPLATES = [
   {
     id: 'scratchpad',
     label: 'Code scratchpad',
-    description: 'A runnable Qiskit block with room for what you tried and what happened.',
+    description: 'A runnable code block with room for what you tried and what happened.',
     build: () => ({
       title: 'Code scratchpad',
-      folder: 'Lab Work',
+      folder: 'Experiments',
       tags: ['code'],
       content: [
         textBlock(`# Scratchpad
 
 What are you trying out?`),
-        codeBlock({ framework: 'qiskit', code: BELL_QISKIT }),
+        codeBlock({ framework: 'python', code: PY_SCRATCH }),
         textBlock(`## What happened
 
 - Output:
@@ -66,7 +62,7 @@ What are you trying out?`),
     description: 'Concept summary, formulas, examples, mistakes, and review questions.',
     build: () => ({
       title: 'Study notes',
-      folder: 'Quantum Basics',
+      folder: 'Learning',
       tags: ['study'],
       content: [
         textBlock(
@@ -74,18 +70,14 @@ What are you trying out?`),
 
 ## Key idea
 
-Write the core intuition here. Use inline math like $\\ket{\\psi} = \\alpha\\ket{0} + \\beta\\ket{1}$.
+Write the core intuition in your own words. Use inline math like $a^2 + b^2 = c^2$.
 
 > [!tip] Study move
-> Link related topics with [[Quantum Measurement]] or [[Superposition]] so you can jump between notes later.
+> Link related topics with [[Another topic]] so you can jump between notes later.
 
 ## Formula
 
-$$ |\\alpha|^2 + |\\beta|^2 = 1 $$
-
-> [!formula] Born rule, the probability of measuring outcome $x$ is $P(x)$.
-
-$$ P(x) = |\\langle x | \\psi \\rangle|^2 $$
+$$ \\bar{x} = \\frac{1}{N}\\sum_{i=1}^{N} x_i $$
 
 ## Example
 
@@ -108,10 +100,10 @@ $$ P(x) = |\\langle x | \\psi \\rangle|^2 $$
   {
     id: 'experiment',
     label: 'Experiment log',
-    description: 'Objective → circuit → code → results, wired together.',
+    description: 'Objective → method → code → results, wired together.',
     build: () => ({
       title: 'Experiment log',
-      folder: 'Lab Work',
+      folder: 'Experiments',
       tags: ['experiment'],
       content: [
         textBlock(`# Experiment log
@@ -119,77 +111,150 @@ $$ P(x) = |\\langle x | \\psi \\rangle|^2 $$
 ## Objective
 
 What are you testing, and what do you expect to happen?`),
-        textBlock(`## Circuit
-
-The circuit under test:`),
-        circuitBlock({ data: BELL_CIRCUIT, source: 'manual', name: 'Bell state' }),
         textBlock(`> [!question] Before running
-> What measurement outcomes should this circuit produce, and why?`),
-        textBlock(`## Code
+> What result would prove you wrong?`),
+        textBlock(`## Method
 
-Run the experiment and capture the measurement counts:`),
-        codeBlock({ framework: 'qiskit', code: BELL_QISKIT }),
+Run the experiment and capture what it produces:`),
+        codeBlock({ framework: 'python', code: PY_SCRATCH }),
         textBlock(`## Results & observations
 
-- Expected: roughly 50% \`00\` and 50% \`11\`.
+- Expected:
 - Observed:
-- Notes:`),
+- Notes:
+
+## Conclusion
+
+Did the result match the prediction? Why or why not?`),
       ],
     }),
   },
   {
-    id: 'algorithm',
-    label: 'Algorithm analysis',
-    description: 'Break down an algorithm: problem, setup, steps, circuit, and complexity.',
+    id: 'reading',
+    label: 'Reading notes',
+    description: 'Summarise a paper, article or book: claims, evidence, and what you think.',
     build: () => ({
-      title: 'Algorithm analysis',
-      folder: 'Algorithms',
-      tags: ['algorithm'],
+      title: 'Reading notes',
+      folder: 'Reading',
+      tags: ['reading'],
       content: [
         textBlock(
-          `# Algorithm
+          `# Title of the paper / article
 
-## Problem
+- **Source:**
+- **Author(s):**
+- **Read on:**
 
-What does this algorithm solve?
+## Summary
 
-## Setup
+In two or three sentences: what is this about?
 
-Initial state and assumptions.
+## Key claims
 
-## Steps
+1. Claim, and the evidence offered for it
+2.
 
-1. Step one
-2. Step two
-3. Step three
+## Quotes worth keeping
 
-## Complexity
+>
 
-Classical vs. quantum cost, where is the speedup?
+## My take
 
-## Formula / state
+> [!question] Do I believe it?
+> What is strong here, and what is missing?
 
-$$ \\ket{\\psi} = \\frac{\\ket{0} + \\ket{1}}{\\sqrt{2}} $$
+## Follow-ups
 
-> [!example] Related notes
-> Connect this to [[Quantum Measurement]], [[Superposition]], and [[Entanglement]].`
+- [ ] Look up:
+- [ ] Related notes: [[Another note]]`
         ),
-        textBlock(`## Reference circuit`),
-        circuitBlock({ data: null, source: 'manual', name: '' }),
+      ],
+    }),
+  },
+  {
+    id: 'decision',
+    label: 'Decision log',
+    description: 'Options, trade-offs and the call you made, so you can revisit why later.',
+    build: () => ({
+      title: 'Decision log',
+      folder: 'Decisions',
+      tags: ['decision'],
+      content: [
+        textBlock(
+          `# Decision
+
+## Context
+
+What forced this decision, and what constraints apply?
+
+## Options
+
+| Option | Upside | Downside |
+| --- | --- | --- |
+| A | | |
+| B | | |
+
+## Decision
+
+> [!tip] Chosen
+> Which option, and the single strongest reason for it.
+
+## What would change my mind
+
+-
+
+## Review on
+
+- [ ] Revisit this on a set date and note how it turned out.`
+        ),
+      ],
+    }),
+  },
+  {
+    id: 'project',
+    label: 'Project plan',
+    description: 'Goal, milestones, open questions and a running log.',
+    build: () => ({
+      title: 'Project plan',
+      folder: 'Projects',
+      tags: ['project'],
+      content: [
+        textBlock(
+          `# Project
+
+## Goal
+
+What does done look like?
+
+## Milestones
+
+- [ ] First milestone
+- [ ] Second milestone
+- [ ] Third milestone
+
+## Open questions
+
+-
+
+## Log
+
+- Today:`
+        ),
+        codeBlock({ framework: 'javascript', code: JS_SCRATCH }),
       ],
     }),
   },
   {
     id: 'lab-report',
-    label: 'Quantum lab report',
+    label: 'Research report',
     description: 'Formal write-up: abstract, method, data, conclusion.',
     build: () => ({
-      title: 'Lab report',
-      folder: 'Lab Work',
+      title: 'Research report',
+      folder: 'Reports',
       tags: ['report'],
       content: [
         textBlock(
-          `# Lab report
+          `# Research report
 
 ## Abstract
 
@@ -197,11 +262,10 @@ A short summary of what was done and found.
 
 ## Method
 
-Describe the circuit and procedure.`
+Describe the procedure and why you chose it.`
         ),
-        circuitBlock({ data: null, source: 'manual', name: '' }),
         textBlock(`## Code & data`),
-        codeBlock({ framework: 'qiskit', code: BELL_QISKIT }),
+        codeBlock({ framework: 'python', code: PY_SCRATCH }),
         textBlock(`## Results
 
 Report measurements and plots here.
@@ -212,11 +276,113 @@ Did the results match the prediction? Why or why not?`),
       ],
     }),
   },
-]
+  {
+    id: 'brainstorm',
+    label: 'Brainstorm',
+    description: 'A mind map to spread ideas out, then pick the best and decide what to do next.',
+    build: () => ({
+      title: 'Brainstorm',
+      folder: 'Ideas',
+      tags: ['brainstorm'],
+      content: [
+        textBlock(`# Brainstorm
 
+What problem are we exploring? Click the map, press **Tab** to add a branch and **Enter** for a sibling.`),
+        mindMapBlock(mmNode('The question', [
+          mmNode('Causes', [mmNode('…')]),
+          mmNode('Options', [mmNode('…')]),
+          mmNode('Constraints', [mmNode('…')]),
+          mmNode('Wild ideas', [mmNode('…')]),
+        ])),
+        textBlock(`## Best three ideas
+
+1. 
+2. 
+3. 
+
+## Next steps
+
+- [ ] `),
+      ],
+    }),
+  },
+  {
+    id: 'concept-map',
+    label: 'Concept map + flashcards',
+    description: 'Map a topic visually, then write question :: answer cards to review it later.',
+    build: () => ({
+      title: 'Concept map',
+      folder: 'Learning',
+      tags: ['study'],
+      content: [
+        textBlock(`# Topic
+
+One-paragraph summary in your own words.`),
+        mindMapBlock(mmNode('Topic', [
+          mmNode('Key idea 1', [mmNode('Example')]),
+          mmNode('Key idea 2', [mmNode('Formula')]),
+          mmNode('Related topics'),
+          mmNode('Common mistakes'),
+        ])),
+        textBlock(`## Flashcards
+
+Each line with \`::\` becomes a card in **Review**.
+
+- What is the main idea of this topic? :: Your answer here
+- Why does it matter? :: Your answer here`),
+      ],
+    }),
+  },
+  {
+    id: 'process',
+    label: 'Process / flowchart',
+    description: 'Draw the steps of a process or algorithm as a flowchart, with notes on each step.',
+    build: () => ({
+      title: 'Process',
+      folder: DEFAULT_FOLDER,
+      tags: ['process'],
+      content: [
+        textBlock(`# Process
+
+What does this process do, and when is it used?`),
+        diagramBlock(`flowchart TD
+  start([Start]) --> step1[First step]
+  step1 --> check{Condition met?}
+  check -- yes --> step2[Next step]
+  check -- no --> fix[Adjust]
+  fix --> step1
+  step2 --> finish([Done])`),
+        textBlock(`## Notes on each step
+
+- **First step**: 
+- **Condition**: `),
+      ],
+    }),
+  },
+  {
+    id: 'flashcards',
+    label: 'Flashcard deck',
+    description: 'A list of question :: answer cards, reviewed with spaced repetition.',
+    build: () => ({
+      title: 'Flashcards',
+      folder: 'Learning',
+      tags: ['flashcards'],
+      content: [
+        textBlock(`# Flashcards
+
+Write one card per line as \`question :: answer\`. Open **Review** on the notes page to study the ones that are due.
+
+- Capital of France :: Paris
+- $e^{i\\pi} + 1$ :: $0$ (Euler's identity)
+- Mitochondria :: The organelle that produces most of the cell's ATP`),
+      ],
+    }),
+  },
+]
 // The three starters the empty notebook offers, in the order it offers them:
-// something blank, something for a lab run, something for a code experiment.
-// Named here rather than in the page so the page cannot drift from the roster.
+// something blank, something for a structured experiment, something for a code
+// experiment. Named here rather than in the page so the page cannot drift from
+// the roster.
 export const STARTER_TEMPLATE_IDS = ['blank', 'experiment', 'scratchpad']
 
 export function getTemplate(id) {
@@ -224,9 +390,76 @@ export function getTemplate(id) {
 }
 
 // Distinct block types a template seeds (for the picker's "Includes …" chips).
-// Order: text → code → circuit so cards read consistently.
+// Order: text → code so cards read consistently.
 export function templateBlockTypes(template) {
   const seen = new Set()
   for (const block of template.build().content || []) seen.add(block.type)
-  return ['text', 'code', 'circuit'].filter((t) => seen.has(t))
+  return ['text', 'code', 'mindmap', 'diagram'].filter((t) => seen.has(t))
+}
+
+// The first note a new reader sees. Not in TEMPLATES: it is a one-off, seeded once
+// by the notebook page (see seedWelcomeNote in pages/Notebook.jsx).
+export const WELCOME_TEMPLATE = {
+  id: 'welcome',
+  build: () => ({
+    title: 'Welcome to your notebook',
+    folder: DEFAULT_FOLDER,
+    tags: ['start-here'],
+    content: [
+      textBlock(`# Welcome
+
+This is a note. It can hold writing, math, code and sketches in one place, and it saves itself as you type.
+
+## Try these
+
+- Type **/** on an empty line to add a heading, list, code block, plot or sketch.
+- Write math between dollar signs: $E = mc^2$.
+- Link to another note with double brackets, like [[Another note]]. Both notes show the link.
+- Select text to format it.`),
+      codeBlock({ framework: 'python', code: 'print("Hello from your notebook")\nprint(2 + 2)\n' }),
+      textBlock(`Click the block above and press **Ctrl+Enter** to run it. The output stays with the note.
+
+## Your notes are yours
+
+- They are saved in this browser. Use the menu on the notes page to download a backup, or sign in (top right) if your server has accounts.
+- The **Agents** button opens an assistant that can search your notes, answer questions about them and quiz you.
+
+Delete this note whenever you like.`),
+    ],
+  }),
+}
+
+// One journal note per day. `dailyKey` is the local date, e.g. "2026-10-08".
+export function todayKey(date = new Date()) {
+  const p = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`
+}
+
+export function dailyTitle(key) {
+  const [y, m, d] = key.split('-').map(Number)
+  const label = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return `Journal · ${label}`
+}
+
+export const DAILY_TEMPLATE = {
+  id: 'daily',
+  build: (key = todayKey()) => ({
+    title: dailyTitle(key),
+    folder: 'Journal',
+    tags: ['journal'],
+    content: [
+      textBlock(`## Focus for today
+
+What matters most today?
+
+## Notes
+
+## Learned
+
+## Questions to follow up
+
+> [!question]
+> `),
+    ],
+  }),
 }

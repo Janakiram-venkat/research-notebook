@@ -7,16 +7,13 @@
 // ── symbol palette ────────────────────────────────────────────────────────────
 export const SYMBOL_GROUPS = [
   {
-    label: 'Quantum',
+    label: 'Logic & sets',
     items: [
-      { display: '|0⟩', tex: '\\ket{0}' },
-      { display: '|1⟩', tex: '\\ket{1}' },
-      { display: '|ψ⟩', tex: '\\ket{\\psi}' },
-      { display: '⟨ψ|', tex: '\\bra{\\psi}' },
-      { display: '|φ⟩', tex: '\\ket{\\phi}' },
-      { display: '⟨φ|ψ⟩', tex: '\\langle\\phi|\\psi\\rangle' },
-      { display: '⊗', tex: '\\otimes' },
-      { display: 'A†', tex: 'A^{\\dagger}' },
+      { display: '∀', tex: '\\forall' }, { display: '∃', tex: '\\exists' },
+      { display: '∈', tex: '\\in' }, { display: '⊂', tex: '\\subset' },
+      { display: '∪', tex: '\\cup' }, { display: '∩', tex: '\\cap' },
+      { display: '¬', tex: '\\neg' }, { display: '⇒', tex: '\\Rightarrow' },
+      { display: '⇔', tex: '\\iff' }, { display: 'ℝ', tex: '\\mathbb{R}' },
     ],
   },
   {
@@ -54,11 +51,11 @@ export const SYMBOL_GROUPS = [
 // ── formula templates ─────────────────────────────────────────────────────────
 // Ready-made display equations dropped in as block math nodes.
 export const FORMULA_TEMPLATES = [
-  { label: 'Superposition', tex: '|\\psi\\rangle = \\frac{1}{\\sqrt{2}}\\big(|0\\rangle + |1\\rangle\\big)' },
-  { label: 'General qubit', tex: '|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle,\\quad |\\alpha|^2 + |\\beta|^2 = 1' },
-  { label: 'Bell state Φ⁺', tex: '|\\Phi^+\\rangle = \\frac{1}{\\sqrt{2}}\\big(|00\\rangle + |11\\rangle\\big)' },
-  { label: 'Hadamard', tex: 'H = \\frac{1}{\\sqrt{2}}\\begin{bmatrix} 1 & 1 \\\\ 1 & -1 \\end{bmatrix}' },
-  { label: 'Bloch state', tex: '|\\psi\\rangle = \\cos\\tfrac{\\theta}{2}|0\\rangle + e^{i\\varphi}\\sin\\tfrac{\\theta}{2}|1\\rangle' },
-  { label: 'Expectation', tex: '\\langle A \\rangle = \\langle\\psi| A |\\psi\\rangle' },
-  { label: 'Born rule', tex: 'P(x) = |\\langle x|\\psi\\rangle|^2' },
+  { label: 'Quadratic formula', tex: 'x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}' },
+  { label: "Bayes' rule", tex: 'P(A \\mid B) = \\frac{P(B \\mid A)\\,P(A)}{P(B)}' },
+  { label: 'Mean & variance', tex: '\\mu = \\frac{1}{N}\\sum_{i=1}^{N} x_i,\\quad \\sigma^2 = \\frac{1}{N}\\sum_{i=1}^{N}(x_i - \\mu)^2' },
+  { label: 'Gradient descent', tex: '\\theta_{t+1} = \\theta_t - \\eta\\,\\nabla_\\theta L(\\theta_t)' },
+  { label: 'Normal distribution', tex: 'f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\,e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}' },
+  { label: 'Expectation', tex: '\\mathbb{E}[X] = \\sum_x x\\,P(X = x)' },
+  { label: "Euler's identity", tex: 'e^{i\\pi} + 1 = 0' },
 ]

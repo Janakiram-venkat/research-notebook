@@ -61,13 +61,7 @@ function VersionPreview({ version }) {
             </div>
           )
         }
-        return (
-          <div key={block.id} className="nb-history-preview-block">
-            <p className="nb-history-preview-label">
-              Circuit{block.name ? ` · ${block.name}` : ''}
-            </p>
-          </div>
-        )
+        return null
       })}
     </div>
   )

@@ -40,6 +40,7 @@ export const VERSION_REASONS = {
   'pre-delete': 'Before deleting',
   'pre-conflict': 'Before a sync conflict',
   'pre-import': 'Before an import',
+  'pre-agent': 'Before an assistant edit',
 }
 
 export function describeReason(reason) {

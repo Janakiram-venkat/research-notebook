@@ -2,7 +2,7 @@
 //
 // The whole note is ONE editor: prose flows continuously (cross-block selection,
 // backspace-merge, Enter-to-split all come for free), while runnable code and
-// embedded circuits are atom node-views living in the same document. On every
+// embedded code, sketches and plots are atom node-views living in the same document. On every
 // change the doc is serialized back to the note's stored block array (docBlocks),
 // so search / export / templates / backlinks keep working untouched.
 
@@ -35,8 +35,10 @@ import BubbleToolbar from './BubbleToolbar.jsx'
 import WikiLink from './extensions/WikiLink.js'
 import Callout from './extensions/Callout.js'
 import RunnableCode from './extensions/RunnableCode.js'
-import CircuitNode from './extensions/CircuitNode.js'
 import SketchNode from './extensions/SketchNode.js'
+import MindMapNode from './extensions/MindMapNode.js'
+import DiagramNode from './extensions/DiagramNode.js'
+import './visual-blocks.css'
 import DataPlotNode from './extensions/DataPlotNode.js'
 import { SlashCommand } from './extensions/SlashCommand.js'
 import { WikiSuggestion } from './extensions/WikiSuggestion.js'
@@ -266,15 +268,18 @@ export default function NoteDocument({ noteId, initialContent, onChange, autoFoc
       WikiLink,
       Callout,
       RunnableCode,
-      CircuitNode,
       SketchNode,
       DataPlotNode,
+      MindMapNode,
+      DiagramNode,
       WikiSuggestion.configure({ getNotes: () => listNotes() }),
       // eslint-disable-next-line react-hooks/refs
       SlashCommand.configure({ onPickImage: handlePickImage, onInsertEquation: handleInsertEquation }),
       Markdown,
     ],
-    autofocus: autoFocus ? 'end' : false,
+    // Open at the top: a note is usually opened to be read, and jumping to the end
+    // of a long note hid its beginning.
+    autofocus: autoFocus ? 'start' : false,
     content: '',
     editorProps: {
       attributes: { class: 'nb-prose nb-doc-prose' },
@@ -316,7 +321,14 @@ export default function NoteDocument({ noteId, initialContent, onChange, autoFoc
       const manager = editor.storage.markdown?.manager
       if (!manager) return
       try {
-        editor.commands.setContent(blocksToDoc(manager, initial.current), { emitUpdate: false })
+        // Loading the note is not an edit: keep it out of the undo history, or the
+        // first Ctrl+Z after opening "undoes" the load, empties the note, and the
+        // autosave then stores the empty note.
+        editor
+          .chain()
+          .command(({ tr }) => { tr.setMeta('addToHistory', false); return true })
+          .setContent(blocksToDoc(manager, initial.current), { emitUpdate: false })
+          .run()
       } catch {
         /* leave the empty doc if the stored content can't be parsed */
       }
@@ -384,9 +396,10 @@ export default function NoteDocument({ noteId, initialContent, onChange, autoFoc
           shouldShow={({ editor, state }) =>
             editor.isEditable &&
             !state.selection.empty &&
+            // A whole block selected (mind map, diagram, sketch, plot…) has no text to format.
+            !state.selection.node &&
             !editor.isActive('image') &&
             !editor.isActive('runnableCode') &&
-            !editor.isActive('circuitNode') &&
             !editor.isActive('codeBlock')
           }
         >

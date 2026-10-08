@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import { toastSuccess, toastError } from './ui/toast.js'
 import { useMonacoTheme } from '../../lib/editorTheme.js'
-import { executeCode } from '../../lib/executeCode.js'
+import { executeCode, isPythonLoading, subscribePythonLoading } from '../../lib/executeCode.js'
+import { CODE_LANGUAGES, normalizeLanguage } from '../../lib/notebook/notebookStore.js'
 
 // Rough editor height: grow with the code, clamped so a long script scrolls
 // internally instead of pushing the whole note down.
@@ -19,25 +20,21 @@ function editorHeight(code) {
   return Math.min(520, Math.max(140, lines * 20 + 24))
 }
 
-const FRAMEWORKS = [
-  { id: 'qiskit', label: 'Qiskit' },
-  { id: 'cirq', label: 'Cirq' },
-  { id: 'pennylane', label: 'PennyLane' },
-  { id: 'python', label: 'Python' },
-]
-
 export default function CodeBlock({ block, onChange }) {
   const [running, setRunning] = useState(false)
+  const [loadingPython, setLoadingPython] = useState(isPythonLoading)
+  useEffect(() => subscribePythonLoading(setLoadingPython), [])
   const [copied, setCopied] = useState(false)
   const [fwOpen, setFwOpen] = useState(false)
   const [outputCollapsed, setOutputCollapsed] = useState(false)
   const runRef = useRef(null)
   const result = block.lastResult
+  const language = normalizeLanguage(block.framework)
 
   const run = useCallback(async () => {
     if (running) return
     setRunning(true)
-    const result = await executeCode(block.code) // never throws
+    const result = await executeCode(block.code, language) // never throws
     onChange({
       lastResult: {
         status: result.ok ? 'ok' : 'error',
@@ -49,7 +46,7 @@ export default function CodeBlock({ block, onChange }) {
       },
     })
     setRunning(false)
-  }, [block.code, running, onChange])
+  }, [block.code, language, running, onChange])
 
   // Keep a stable ref so the Monaco Ctrl+Enter command always runs the latest.
   useEffect(() => {
@@ -73,21 +70,21 @@ export default function CodeBlock({ block, onChange }) {
     )
   }
 
-  const fwLabel = FRAMEWORKS.find((f) => f.id === block.framework)?.label || 'Qiskit'
+  const current = CODE_LANGUAGES.find((l) => l.id === language)
 
   return (
     <div className="nb-code">
       <div className="nb-code-toolbar">
         <div className="nb-fw-wrap">
           <button className="nb-fw-btn" onClick={() => setFwOpen((o) => !o)} aria-haspopup="menu" aria-expanded={fwOpen}>
-            {fwLabel} <ChevronDown size={13} />
+            {current.label} <ChevronDown size={13} />
           </button>
           {fwOpen && (
             <div className="nb-fw-menu" role="menu" onMouseLeave={() => setFwOpen(false)}>
-              {FRAMEWORKS.map((f) => (
+              {CODE_LANGUAGES.map((f) => (
                 <button
                   key={f.id}
-                  className={`nb-fw-item${f.id === block.framework ? ' is-active' : ''}`}
+                  className={`nb-fw-item${f.id === language ? ' is-active' : ''}`}
                   onClick={() => {
                     onChange({ framework: f.id })
                     setFwOpen(false)
@@ -102,7 +99,7 @@ export default function CodeBlock({ block, onChange }) {
 
         <button className="nb-run-btn" onClick={run} disabled={running} aria-busy={running}>
           {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-          {running ? 'Running…' : 'Run'}
+          {running ? (loadingPython ? 'Loading Python (first run only)…' : 'Running…') : 'Run'}
         </button>
 
         <div className="nb-code-toolbar-spacer" />
@@ -115,8 +112,8 @@ export default function CodeBlock({ block, onChange }) {
       <div className="nb-code-editor-monaco" style={{ height: editorHeight(block.code) }}>
         <Editor
           height="100%"
-          defaultLanguage="python"
-          language="python"
+          defaultLanguage={current.monaco}
+          language={current.monaco}
           value={block.code}
           onChange={(val) => onChange({ code: val || '' })}
           onMount={handleEditorMount}

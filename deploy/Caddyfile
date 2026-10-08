@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy notebook:8000 {
+		flush_interval -1   # lets the assistant's streamed replies arrive as they are written
+	}
+}

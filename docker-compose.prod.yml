@@ -1,0 +1,19 @@
+# Adds Caddy in front: automatic HTTPS (Let's Encrypt) for DOMAIN, and the app is no
+# longer published on a public port. Set DOMAIN in the shell or a .env file next to this.
+services:
+  notebook:
+    ports: !reset []
+    expose: ["8000"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN to your domain name}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [notebook]
+
+volumes:
+  caddy_data:

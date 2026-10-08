@@ -2,15 +2,32 @@
 // stored as lucide component references and rendered by SuggestionList.
 //
 // Items run a TipTap command inside the single note document: prose commands,
-// or inserting a runnable-code / circuit atom node at the cursor. The Image item
+// or inserting a runnable-code atom node at the cursor. The Image item
 // opens a file picker wired in NoteDocument.
 
 import {
   Type, Heading1, Heading2, Heading3, TextQuote, Minus, List, ListOrdered,
-  ListChecks, Sigma, Info, Code2, Cpu, Image as ImageIcon,
-  Table as TableIcon, PenTool, LineChart,
+  ListChecks, Sigma, Info, Code2, Image as ImageIcon,
+  Table as TableIcon, PenTool, LineChart, Network, Workflow, Layers,
 } from 'lucide-react'
+import { DEFAULT_DIAGRAM } from './DiagramNode.js'
+import { defaultMindMap, mindMapFromOutline } from '../../../lib/notebook/mindmap.js'
 import { FORMULA_TEMPLATES } from '../editorActions.js'
+
+// A ProseMirror list node -> an indented "- item" outline for mindMapFromOutline.
+function listToOutline(list, depth = 0) {
+  const lines = []
+  list.forEach((item) => {
+    let text = ''
+    const nested = []
+    item.forEach((child) => {
+      if (/List$/.test(child.type.name)) nested.push(listToOutline(child, depth + 1))
+      else if (!text) text = child.textContent.trim()
+    })
+    lines.push(`${'  '.repeat(depth)}- ${text || '…'}`, ...nested)
+  })
+  return lines.join('\n')
+}
 
 // Each entry: { key, title, subtitle, Icon, keywords, run({ editor, range }) }
 export function buildSlashItems({ onPickImage, onInsertEquation }) {
@@ -76,16 +93,10 @@ export function buildSlashItems({ onPickImage, onInsertEquation }) {
       run: inline((c) => c.setCallout('note')),
     },
     {
-      key: 'code', title: 'Code block', subtitle: 'Runnable quantum code', Icon: Code2,
-      keywords: 'code qiskit python run execute',
+      key: 'code', title: 'Code block', subtitle: 'Runnable Python or JavaScript', Icon: Code2,
+      keywords: 'code python javascript js run execute',
       run: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertContent({ type: 'runnableCode' }).run(),
-    },
-    {
-      key: 'circuit', title: 'Circuit', subtitle: 'Embed a saved circuit', Icon: Cpu,
-      keywords: 'circuit quantum composer gates',
-      run: ({ editor, range }) =>
-        editor.chain().focus().deleteRange(range).insertContent({ type: 'circuitNode' }).run(),
     },
     {
       key: 'image', title: 'Image', subtitle: 'Insert from your device', Icon: ImageIcon,
@@ -113,6 +124,48 @@ export function buildSlashItems({ onPickImage, onInsertEquation }) {
       run: ({ editor, range }) =>
         editor.chain().focus().deleteRange(range).insertContent({ type: 'sketch' }).run(),
     },
+    {
+      key: 'mindmap', title: 'Mind map', subtitle: 'Branching map of ideas, keyboard-driven', Icon: Network,
+      keywords: 'mind map mindmap brainstorm tree ideas branches graph visual',
+      run: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).insertContent({ type: 'mindMap', attrs: { data: defaultMindMap() } }).run(),
+    },
+    {
+      key: 'mindmap-outline', title: 'Mind map from list', subtitle: 'Turn the bullet list above into a map', Icon: Network,
+      keywords: 'mind map outline list convert bullets',
+      run: ({ editor, range }) => {
+        // The nearest list before the cursor becomes the map; with none, a starter map.
+        const { state } = editor
+        let list = null
+        let heading = ''
+        state.doc.nodesBetween(0, range.from, (node) => {
+          if (node.type.name === 'heading') heading = node.textContent
+          if (node.type.name === 'bulletList' || node.type.name === 'orderedList' || node.type.name === 'taskList') {
+            list = node
+            return false
+          }
+          return true
+        })
+        const data = list ? mindMapFromOutline(listToOutline(list), heading || 'Central idea') : defaultMindMap()
+        editor.chain().focus().deleteRange(range).insertContent({ type: 'mindMap', attrs: { data } }).run()
+      },
+    },
+    {
+      key: 'flashcard', title: 'Flashcard', subtitle: 'question :: answer, reviewed with spaced repetition', Icon: Layers,
+      keywords: 'flashcard flash card quiz study review memorise memorize anki spaced repetition',
+      run: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range)
+          .insertContent('Question :: Answer')
+          // Select "Question" so typing replaces it straight away.
+          .setTextSelection({ from: range.from, to: range.from + 'Question'.length })
+          .run(),
+    },
+    {
+      key: 'diagram', title: 'Diagram', subtitle: 'Flowchart, sequence, timeline, Gantt, pie…', Icon: Workflow,
+      keywords: 'diagram flowchart flow chart mermaid sequence gantt timeline pie graph uml visual',
+      run: ({ editor, range }) =>
+        editor.chain().focus().deleteRange(range).insertContent({ type: 'diagram', attrs: { code: DEFAULT_DIAGRAM } }).run(),
+    },
   ]
 
   // Ready-made formulas as extra "Formula: …" entries.
@@ -133,8 +186,18 @@ export function buildSlashItems({ onPickImage, onInsertEquation }) {
 export function filterSlashItems(items, query) {
   const q = (query || '').trim().toLowerCase()
   if (!q) return items
-  return items.filter(
-    (item) =>
-      item.title.toLowerCase().includes(q) || (item.keywords || '').includes(q),
-  )
+  // Title matches first (prefix before substring), keyword-only matches after, so
+  // "/diagram" offers Diagram before Sketch (whose keywords mention diagrams).
+  const rank = (item) => {
+    const title = item.title.toLowerCase()
+    if (title.startsWith(q)) return 0
+    if (title.includes(q)) return 1
+    if ((item.keywords || '').includes(q)) return 2
+    return -1
+  }
+  return items
+    .map((item, i) => ({ item, i, r: rank(item) }))
+    .filter((x) => x.r >= 0)
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.item)
 }

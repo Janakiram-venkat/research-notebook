@@ -1,12 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Uncertainty Hub">
-  <!-- Pixel "UH" monogram, drawn on a 4px grid so it lands on whole pixels at
-       16px and 32px. The blocky letterforms echo the wordmark in the logo. -->
-  <rect width="64" height="64" rx="12" fill="#141414"/>
-  <g fill="#E6E6E6">
-    <!-- U -->
-    <path d="M6 12h8v32h4v8h-8v-4H6Z"/>
-    <path d="M22 12h8v36h-4v4h-8v-8h4Z"/>
-    <!-- H -->
-    <path d="M34 12h8v16h8V12h8v40h-8V36h-8v16h-8Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Research Notebook">
+  <rect width="64" height="64" rx="12" fill="#1f2937"/>
+  <rect x="15" y="12" width="34" height="40" rx="3" fill="#f5f5f0"/>
+  <rect x="15" y="12" width="7" height="40" rx="3" fill="#4f46e5"/>
+  <g fill="#a0a5af"><rect x="27" y="22" width="16" height="2"/><rect x="27" y="29" width="16" height="2"/><rect x="27" y="36" width="16" height="2"/><rect x="27" y="43" width="10" height="2"/></g>
 </svg>

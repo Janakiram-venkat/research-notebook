@@ -1,0 +1,60 @@
+.graph-page { display: flex; flex-direction: column; height: 100%; min-height: 0; padding: 20px 24px 24px; gap: 16px; box-sizing: border-box; }
+.graph-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.graph-head h1 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 22px; letter-spacing: -0.01em; color: var(--text-primary); }
+.graph-head p { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+.graph-spacer { flex: 1; }
+.graph-search {
+  display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 38px; min-width: 220px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); color: var(--text-muted);
+}
+.graph-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.graph-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 14px; color: var(--text-primary); }
+.graph-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text-secondary, var(--text-muted)); cursor: pointer; }
+.graph-toggle input { accent-color: var(--accent); }
+
+.graph-stage {
+  position: relative; flex: 1; min-height: 420px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(86, 93, 126, 0.16) 1px, transparent 0) 0 0 / 22px 22px,
+    linear-gradient(180deg, var(--graph-paper), var(--surface-soft));
+}
+.graph-svg { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; user-select: none; }
+.graph-svg:active { cursor: grabbing; }
+.graph-edge { stroke: #8C93B0; stroke-opacity: 0.45; transition: stroke-opacity 0.15s, stroke 0.15s; }
+.graph-edge.is-lit { stroke: var(--accent); stroke-opacity: 0.9; }
+.graph-edge.is-dim { stroke-opacity: 0.12; }
+.graph-node { cursor: pointer; transition: opacity 0.15s; outline: none; }
+.graph-node circle:not(.graph-halo) { stroke: var(--graph-halo-stroke); stroke-width: 2; filter: drop-shadow(0 1px 2px rgba(11, 15, 42, 0.18)); }
+.graph-halo { fill: var(--accent); opacity: 0; transition: opacity 0.15s; }
+.graph-node.is-hover .graph-halo, .graph-node:focus-visible .graph-halo { opacity: 0.18; }
+.graph-node.is-dim { opacity: 0.18; }
+.graph-label { fill: var(--text-primary); font-family: var(--font-sans); font-weight: 600; paint-order: stroke; stroke: var(--graph-paper); stroke-opacity: 0.92; stroke-width: 4px; pointer-events: none; }
+
+.graph-controls { position: absolute; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.graph-controls button {
+  display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-card); color: var(--text-primary); cursor: pointer; box-shadow: 0 2px 6px rgba(11, 15, 42, 0.06);
+}
+.graph-controls button:hover { border-color: var(--accent); color: var(--accent); }
+.graph-controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.graph-legend {
+  position: absolute; left: 14px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 6px 12px; max-width: 60%;
+  margin: 0; padding: 8px 12px; list-style: none; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--glass-bg); backdrop-filter: blur(6px); font-size: 12.5px; color: var(--text-muted);
+}
+.graph-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.graph-legend span { width: 9px; height: 9px; border-radius: 50%; }
+
+.graph-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center;
+  border: 1px dashed var(--border); border-radius: 16px; padding: 40px 20px; color: var(--text-muted);
+}
+.graph-empty h2 { margin: 0; color: var(--text-primary); font-size: 18px; }
+.graph-empty p { margin: 0; max-width: 420px; line-height: 1.55; }
+.graph-empty code { padding: 1px 6px; border-radius: 6px; background: var(--surface-muted); font-family: var(--font-mono); font-size: 0.9em; }
+
+@media (max-width: 640px) {
+  .graph-page { padding: 14px 16px 16px; }
+  .graph-search { min-width: 0; flex: 1 1 100%; }
+  .graph-legend { max-width: calc(100% - 80px); }
+}

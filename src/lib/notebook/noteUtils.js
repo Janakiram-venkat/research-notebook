@@ -28,19 +28,6 @@ export function wikiLinkParts(first, second) {
   }
 }
 
-// Canonical circuit block → markdown, shared by the full-note export
-// (NotebookNote.jsx) and the editor's per-node markdown safety net
-// (extensions/CircuitNode.js) so the two paths can't drift apart.
-export function circuitBlockToMarkdown({ name, data } = {}) {
-  const lines = [`> Circuit: ${name || 'Untitled circuit'}`]
-  if (data) {
-    lines.push('', '```json', JSON.stringify(data, null, 2), '```')
-  } else {
-    lines.push('> No circuit imported yet.')
-  }
-  return lines.join('\n')
-}
-
 // Headings across all text blocks → a flat outline. Each entry knows which
 // block it lives in so the UI can scroll to it.
 export function extractOutline(note) {

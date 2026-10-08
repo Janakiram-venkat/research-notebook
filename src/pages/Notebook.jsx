@@ -1,22 +1,24 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
-  Notebook as NotebookIcon, Plus, Search, Type, Code2, Cpu, X,
+  Notebook as NotebookIcon, Plus, Search, Type, Code2, X,
   Star, Folder, Copy, Clock3, FileText, Filter, Command, Download, Upload, AlertTriangle,
-  MoreHorizontal, Lightbulb, Trash2, CloudOff, SlidersHorizontal, LayoutGrid, Rows3,
+  MoreHorizontal, Lightbulb, Trash2, CloudOff, SlidersHorizontal, LayoutGrid, Rows3, Sparkles, Waypoints, CalendarDays, Network, Workflow, Layers,
 } from 'lucide-react'
 import {
   listNotes, createNote, allTags, allFolders, updateNote, duplicateNote,
   deleteNote, restoreNote, getRecentNotes, exportAllNotes, importNotes, getStorageInfo,
-  syncWithRemote, acknowledgeConflicts, DEFAULT_FOLDER,
+  syncWithRemote, acknowledgeConflicts, DEFAULT_FOLDER, newId, textBlock,
 } from '../lib/notebook/notebookStore.js'
-import SyncStatus from '../components/notebook/SyncStatus.jsx'
+import { downloadJson, downloadZip, notesFromFile } from '../lib/notebook/exporters.js'
 import { migrateEmbeddedImages } from '../lib/notebook/assetMigration.js'
 import { purgeExpiredTombstones } from '../lib/notebook/retention.js'
 import { attachmentTargets } from '../lib/notebook/attachments.js'
 import { useSyncStatus } from '../lib/notebook/useSyncStatus.js'
-import { TEMPLATES, templateBlockTypes } from '../lib/notebook/templates.js'
-import { tagColor } from '../lib/notebook/noteUtils.js'
+import { useBackendStatus } from '../lib/useBackendStatus.js'
+import { TEMPLATES, WELCOME_TEMPLATE, DAILY_TEMPLATE, dailyTitle, todayKey, templateBlockTypes } from '../lib/notebook/templates.js'
+import { tagColor, wikiLinkParts, wikiLinkRegex } from '../lib/notebook/noteUtils.js'
+import { deckStats, extractCards, loadStates } from '../lib/notebook/flashcards.js'
 import CommandPalette from '../components/notebook/CommandPalette.jsx'
 import FilterPanel from '../components/notebook/FilterPanel.jsx'
 import NotebookEmpty from '../components/notebook/NotebookEmpty.jsx'
@@ -36,7 +38,8 @@ function formatBytes(bytes) {
 const BLOCK_CHIP = {
   text: { Icon: Type, label: 'Notes' },
   code: { Icon: Code2, label: 'Code' },
-  circuit: { Icon: Cpu, label: 'Circuit' },
+  mindmap: { Icon: Network, label: 'Mind map' },
+  diagram: { Icon: Workflow, label: 'Diagram' },
 }
 
 // Highlight query matches inside a plain-text snippet.
@@ -69,6 +72,9 @@ function snippet(note) {
   for (const b of note.content || []) {
     if (b.type === 'text' && b.markdown?.trim()) {
       return b.markdown
+        // Show a link's label, not its [[id|Label]] syntax; drop callout markers.
+        .replace(wikiLinkRegex('g'), (_, first, second) => wikiLinkParts(first, second).label)
+        .replace(/\[!(\w+)\]/g, '')
         .replace(/```[\s\S]*?```/g, ' ')
         .replace(/\$\$[\s\S]*?\$\$/g, ' formula ')
         .replace(/\$([^$\n]+?)\$/g, '$1')
@@ -83,7 +89,7 @@ function snippet(note) {
 }
 
 function blockCounts(note) {
-  const counts = { text: 0, code: 0, circuit: 0 }
+  const counts = { text: 0, code: 0 }
   for (const b of note.content || []) counts[b.type] = (counts[b.type] || 0) + 1
   return counts
 }
@@ -127,11 +133,32 @@ function TemplatePicker({ onPick, onClose }) {
   )
 }
 
+// A brand-new notebook opens on a short guide note instead of a blank screen. Done
+// once per browser (flagged), and only when there is nothing yet, so a reader who
+// deletes it, or who restores a backup, is not given it again.
+function seedWelcomeNote(existing) {
+  try {
+    if (existing.length > 0 || localStorage.getItem('nb.welcomed')) return existing
+    localStorage.setItem('nb.welcomed', '1')
+    createNote({ ...WELCOME_TEMPLATE.build(), pinned: true })
+    return listNotes()
+  } catch {
+    return existing
+  }
+}
+
 export default function Notebook() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [confirm, confirmEl] = useConfirm()
-  const [notes, setNotes] = useState(() => listNotes())
+  const [notes, setNotes] = useState(() => seedWelcomeNote(listNotes()))
+
+  // Notes the backend (or an agent) changed arrive via applyRemoteNotes().
+  useEffect(() => {
+    const refresh = () => setNotes(listNotes())
+    window.addEventListener('nb:notes-changed', refresh)
+    return () => window.removeEventListener('nb:notes-changed', refresh)
+  }, [])
   const [query, setQuery] = useState(() => searchParams.get('search') || '')
   // One object rather than four pieces of state: the count on the Filters
   // button, the removable chips and the clear-all action all have to agree
@@ -269,6 +296,9 @@ export default function Notebook() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute footprint when the note set changes
   const storage = useMemo(() => getStorageInfo(), [notes])
   const syncStatus = useSyncStatus()
+  const backend = useBackendStatus()
+  // Flashcards across all notes: drives the Review button and its count.
+  const cardStats = useMemo(() => deckStats(extractCards(notes), loadStates()), [notes])
 
   function refreshNotes() {
     setNotes(listNotes())
@@ -281,39 +311,44 @@ export default function Notebook() {
   // Local-only notes need an escape hatch: export the whole notebook to a JSON
   // file the user can re-import on another browser or after a cleared cache.
   function exportBackup() {
-    const bundle = exportAllNotes()
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `quantum-notebook-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-    toastSuccess(`Exported ${bundle.notes.length} note${bundle.notes.length === 1 ? '' : 's'}`)
+    const count = downloadJson(exportAllNotes())
+    toastSuccess(`Exported ${count} note${count === 1 ? '' : 's'}`)
   }
 
-  function importBackup(e) {
+  function exportMarkdown() {
+    const count = downloadZip(exportAllNotes().notes)
+    toastSuccess(`Exported ${count} note${count === 1 ? '' : 's'} as Markdown files`)
+  }
+
+  // Accepts this app's JSON backup, a single .md file, or a .zip of Markdown files
+  // (Obsidian vaults, Notion Markdown exports and this app's own zip).
+  async function importBackup(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const payload = JSON.parse(String(reader.result))
-        const { imported, ok } = importNotes(payload, { mode: 'merge' })
-        if (!ok) {
-          toastError('Import failed, the file was unreadable or storage is full.')
-          return
-        }
-        refreshNotes()
-        toastSuccess(`Imported ${imported} note${imported === 1 ? '' : 's'}`)
-      } catch {
-        toastError("That file isn't a valid notebook export.")
+    try {
+      const { payload } = await notesFromFile(file, { newId, textBlock })
+      const { imported, ok } = importNotes(payload, { mode: 'merge' })
+      if (!ok) {
+        toastError('Import failed, the file was unreadable or storage is full.')
+        return
       }
+      refreshNotes()
+      toastSuccess(`Imported ${imported} note${imported === 1 ? '' : 's'}`)
+    } catch (err) {
+      toastError(err instanceof SyntaxError ? "That file isn't a valid notebook export." : err.message)
     }
-    reader.readAsText(file)
+  }
+
+  // One journal note per day: open today's if it exists, otherwise create it.
+  function openToday() {
+    const key = todayKey()
+    // Matched on title too: dailyKey is local-only and does not travel through sync.
+    const title = dailyTitle(key)
+    const existing = listNotes().find((n) => n.dailyKey === key || n.title === title)
+    const note = existing || createNote({ ...DAILY_TEMPLATE.build(key), templateType: 'daily' })
+    if (!existing) updateNote(note.id, { dailyKey: key })
+    navigate(`/notebook/${note.id}`)
   }
 
   function handlePick(templateId) {
@@ -371,6 +406,9 @@ export default function Notebook() {
 
   const commandItems = useMemo(() => {
     const create = [
+      { key: 'today', section: 'Go to', title: "Today's journal note", Icon: CalendarDays, run: openToday },
+      { key: 'review', section: 'Go to', title: 'Review flashcards', hint: 'question :: answer lines in your notes', Icon: Layers, run: () => navigate('/notebook/review') },
+      { key: 'graph', section: 'Go to', title: 'Knowledge graph', hint: 'How your notes link together', Icon: Waypoints, run: () => navigate('/notebook/graph') },
       { key: 'new-blank', section: 'Create', title: 'New blank note', Icon: Plus, run: handleBlankNote },
       ...TEMPLATES.map((t) => ({
         key: `new-${t.id}`, section: 'Create', title: `New: ${t.label}`, hint: t.description, Icon: Plus,
@@ -394,14 +432,26 @@ export default function Notebook() {
           <span className="nb-eyebrow">
             <NotebookIcon size={13} /> Research Notebook
           </span>
-          <h1 className="nb-dash-title">Your quantum notes</h1>
+          <h1 className="nb-dash-title">Your notes</h1>
           <p className="nb-dash-sub">
-            Write down what you learn, with equations, runnable code and live circuits on the same page. Keep it all tidy with folders and pins.
+            Write down what you learn, with equations, runnable code, sketches and plots on the same page. Keep it all tidy with folders and pins.
           </p>
         </div>
         <div className="nb-header-actions">
           <button className="nb-new-btn nb-new-btn-secondary" onClick={() => setCmdOpen(true)} title="Command palette (Ctrl+K)">
             <Command size={16} /> Search
+          </button>
+          <button className="nb-new-btn nb-new-btn-secondary" onClick={openToday} title="Open today's journal note">
+            <CalendarDays size={16} /> Today
+          </button>
+          {cardStats.total > 0 && (
+            <button className="nb-new-btn nb-new-btn-secondary" onClick={() => navigate('/notebook/review')} title={`${cardStats.due + cardStats.fresh} flashcards to study`}>
+              <Layers size={16} /> Review
+              {cardStats.due + cardStats.fresh > 0 && <span className="nb-btn-count">{cardStats.due + cardStats.fresh}</span>}
+            </button>
+          )}
+          <button className="nb-new-btn nb-new-btn-secondary" onClick={() => navigate('/notebook/graph')} title="See how your notes link together">
+            <Waypoints size={16} /> Graph
           </button>
           {recentNote && (
             <button className="nb-new-btn nb-new-btn-secondary" onClick={() => navigate(`/notebook/${recentNote.id}`)}>
@@ -425,31 +475,36 @@ export default function Notebook() {
                   <Plus size={15} /> Blank note
                 </button>
                 <div className="nb-more-sep" />
+                <button onClick={() => { window.dispatchEvent(new CustomEvent('nb:tour')); setMoreOpen(false) }}>
+                  <Sparkles size={15} /> Take the tour
+                </button>
+                <button onClick={() => { exportMarkdown(); setMoreOpen(false) }}>
+                  <Download size={15} /> Export as Markdown (.zip)
+                </button>
                 <button onClick={() => { exportBackup(); setMoreOpen(false) }}>
-                  <Download size={15} /> Export backup
+                  <Download size={15} /> Export backup (.json)
                 </button>
                 <button onClick={() => { importRef.current?.click(); setMoreOpen(false) }}>
-                  <Upload size={15} /> Import backup
+                  <Upload size={15} /> Import notes (.md, .zip, .json)
                 </button>
               </div>
             )}
           </div>
-          <SyncStatus />
           <button className="nb-new-btn" onClick={() => setPicking(true)}>
             <Plus size={16} /> New note
           </button>
-          <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={importBackup} />
+          <input ref={importRef} type="file" accept=".json,.md,.markdown,.txt,.zip" hidden onChange={importBackup} />
         </div>
       </div>
 
       {/* Signed-out notes live only in this browser's localStorage — clearing
           site data loses them. That was only ever surfaced once storage was
           already 75% full, i.e. far too late to be a warning. */}
-      {notes.length > 0 && (
+      {notes.length > 0 && (backend.state === 'local' || backend.state === 'signin') && (
         <div className="nb-storage-warn nb-local-only" role="note">
           <CloudOff size={15} />
           <span>
-            These notes are saved in this browser only. Clearing site data would lose them, so
+            These notes are saved in this browser only{backend.state === 'signin' ? ' (sign in from the top bar to back them up)' : ''}. Clearing site data would lose them, so
             <button className="nb-storage-warn-action" onClick={exportBackup}>export a backup</button>
             now and then.
           </span>
@@ -613,9 +668,9 @@ export default function Notebook() {
             <span>Pin key notes, group by folder, link notes with [[...]], export Markdown/PDF, and write KaTeX with $...$ or $$...$$.</span>
           </div>
           <div className="nb-guide-examples">
-            <code>{'$\\ket{\\psi}$'}</code>
-            <code>[[Measurement]]</code>
-            <code>$$ |\\alpha|^2 + |\\beta|^2 = 1 $$</code>
+            <code>$E = mc^2$</code>
+            <code>[[Another note]]</code>
+            <code>$$ \\sum_i p_i = 1 $$</code>
             <code>Ctrl+Shift+P PDF</code>
           </div>
           <button className="nb-guide-dismiss" onClick={dismissGuide} title="Dismiss" aria-label="Dismiss power tools guide">
@@ -654,7 +709,7 @@ export default function Notebook() {
               // could reach the inner controls reliably. It's an article now,
               // with one stretched link for "open" and real buttons beside it.
               <article key={note.id} className={`nb-card${note.pinned ? ' is-pinned' : ''}`}>
-                <div className="nb-card-head">
+                <div className={`nb-card-head${note.folder && note.folder !== DEFAULT_FOLDER ? '' : ' is-bare'}`}>
                   {/* Only worth showing when it says something — every card
                       reading "General" was noise on an unfiled notebook. */}
                   {note.folder && note.folder !== DEFAULT_FOLDER && (
@@ -697,7 +752,8 @@ export default function Notebook() {
                 <div className="nb-card-badges">
                   {counts.text > 0 && <span className="nb-badge"><Type size={11} /> {counts.text}</span>}
                   {counts.code > 0 && <span className="nb-badge"><Code2 size={11} /> {counts.code}</span>}
-                  {counts.circuit > 0 && <span className="nb-badge"><Cpu size={11} /> {counts.circuit}</span>}
+                  {counts.mindmap > 0 && <span className="nb-badge" title="Mind maps"><Network size={11} /> {counts.mindmap}</span>}
+                  {counts.diagram > 0 && <span className="nb-badge" title="Diagrams"><Workflow size={11} /> {counts.diagram}</span>}
                 </div>
                 {note.tags?.length > 0 && (
                   <div className="nb-card-tags">

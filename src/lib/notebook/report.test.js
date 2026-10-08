@@ -149,19 +149,17 @@ describe('buildReport', () => {
     expect(body).toContain('second')
   })
 
-  it('collects code and circuit blocks into their own sections', () => {
-    // The fixed frame doing its job: a reader wants the circuit in one place
-    // and the program in another, however they were interleaved while writing.
+  it('collects code blocks into their own section', () => {
+    // The fixed frame doing its job: a reader wants the program in one place,
+    // however it was interleaved with prose while writing.
     const report = buildReport(
       textNote('# T\n\n## Method\n\nprose', [
-        { id: 'c1', type: 'code', framework: 'qiskit', code: 'print(1)' },
-        { id: 'q1', type: 'circuit', data: null, name: 'Bell' },
-        { id: 'c2', type: 'code', framework: 'qiskit', code: 'print(2)' },
+        { id: 'c1', type: 'code', framework: 'python', code: 'print(1)' },
+        { id: 'c2', type: 'code', framework: 'python', code: 'print(2)' },
       ]),
     )
 
     expect(section(report, 'code').blocks).toHaveLength(2)
-    expect(section(report, 'circuit').blocks).toHaveLength(1)
     expect(bodyOf(report, 'method')).toBe('prose')
   })
 
@@ -196,8 +194,8 @@ describe('reportHints', () => {
     expect(keys).not.toContain('method')
   })
 
-  it('says nothing about a missing circuit or code block', () => {
-    // A theory write-up legitimately has neither. Nagging about them would
+  it('says nothing about a missing code block', () => {
+    // A theory write-up legitimately has no code. Nagging about it would
     // train people to ignore the hints entirely, including the useful ones.
     const hints = reportHints(buildReport(textNote('# T\n\n## Objective\n\na\n\n## Method\n\nb\n\n## Result\n\nc\n\n## Interpretation\n\nd\n\n## Conclusion\n\ne')))
     expect(hints).toEqual([])
@@ -216,7 +214,7 @@ describe('reportToMarkdown', () => {
         {
           id: 'c1',
           type: 'code',
-          framework: 'qiskit',
+          framework: 'python',
           code: 'print(1)',
           lastResult: { output: '1\n', status: 'ok' },
         },
@@ -228,7 +226,7 @@ describe('reportToMarkdown', () => {
     expect(md.startsWith('# A run')).toBe(true)
     expect(md.indexOf('## Objective')).toBeLessThan(md.indexOf('## Code'))
     expect(md.indexOf('## Code')).toBeLessThan(md.indexOf('## Result'))
-    expect(md).toContain('```qiskit')
+    expect(md).toContain('```python')
     expect(md).toContain('print(1)')
     // The output is part of the result, not a detail of the editor.
     expect(md).toContain('Output:')

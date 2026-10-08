@@ -2,10 +2,33 @@ html, body, #root { height: 100%; }
 body { overflow: auto; margin: 0; }
 #root { display: flex; flex-direction: column; }
 .app-bar {
-  display: flex; align-items: baseline; gap: 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 14px 24px; background: var(--sheet); border-bottom: 1px solid var(--border-light, rgba(0,0,0,.1));
 }
 .app-bar-brand { font-family: var(--font-bill); font-size: 22px; font-weight: 800; color: var(--bill-night); text-decoration: none; }
 .app-bar-note { font-size: 13px; color: var(--text-muted); }
 .app-main { flex: 1; min-height: 0; overflow: auto; }
 .app-loading { padding: 24px; color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  .app-bar { padding: 10px 16px; }
+  .app-bar-brand { font-size: 18px; }
+  .app-bar-agent span, .account-pill span { display: none; }
+}
+
+/* ── polish ─────────────────────────────────────────────────────────────────── */
+.app-bar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--glass-bg); backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom-color: var(--glass-border);
+}
+.app-bar-brand { display: inline-flex; align-items: center; gap: 10px; letter-spacing: 0.005em; }
+.app-bar-mark { width: 28px; height: 28px; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(11, 15, 42, 0.15)); }
+.app-bar-brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+@media (max-width: 640px) { .app-bar-mark { width: 24px; height: 24px; } }
+.app-bar-icon {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer;
+}
+.app-bar-icon:hover { color: var(--accent); border-color: var(--accent); }
+.app-bar-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

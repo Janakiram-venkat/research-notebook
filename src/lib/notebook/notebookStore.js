@@ -1,8 +1,8 @@
-// Quantum Research Notebook — persistence + data model.
+// Research Notebook — persistence + data model.
 //
 // Notes are local JSON documents made of ordered blocks. The model stays
-// intentionally small and portable: text, runnable code, and embedded circuit
-// snapshots. Folder/pin metadata is optional and backward-compatible with older
+// intentionally small and portable: text, runnable code, sketches and
+// plots. Folder/pin metadata is optional and backward-compatible with older
 // notes already saved in localStorage.
 //
 // Local-first + best-effort cloud sync (signed-in users only): every mutation
@@ -38,6 +38,7 @@
 
 import { getSupabase, getUser } from '../auth.js'
 import { saveVersion } from './versions.js'
+import { backendPush, backendPushDebounced, backendDelete } from '../backend.js'
 
 const STORE_KEY = 'qcb.notebook.notes'
 const TOMBSTONE_KEY = 'qcb.notebook.tombstones'
@@ -56,18 +57,24 @@ export function textBlock(markdown = '') {
   return { id: newId('b'), type: 'text', markdown }
 }
 
-export function codeBlock({ framework = 'qiskit', code = '' } = {}) {
-  return { id: newId('b'), type: 'code', framework, code, lastResult: null }
+// Languages a code block can run. Notes saved before the notebook was
+// generalised carry 'qiskit' / 'cirq' / 'pennylane' — all of those were Python.
+export const CODE_LANGUAGES = [
+  { id: 'python', label: 'Python', monaco: 'python' },
+  { id: 'javascript', label: 'JavaScript', monaco: 'javascript' },
+]
+
+export function normalizeLanguage(value) {
+  return CODE_LANGUAGES.some((l) => l.id === value) ? value : 'python'
 }
 
-export function circuitBlock({ data = null, source = 'manual', name = '' } = {}) {
-  return { id: newId('b'), type: 'circuit', format: 'qcircuit.json@1', data, source, name }
+export function codeBlock({ framework = 'python', code = '' } = {}) {
+  return { id: newId('b'), type: 'code', framework: normalizeLanguage(framework), code, lastResult: null }
 }
 
 export const BLOCK_FACTORIES = {
   text: () => textBlock(''),
   code: () => codeBlock(),
-  circuit: () => circuitBlock(),
 }
 
 // ── store ─────────────────────────────────────────────────────────────────────
@@ -84,13 +91,25 @@ function normalizeAttachment(value) {
   return { kind, id, label: typeof label === 'string' ? label : '' }
 }
 
+// Circuit blocks were removed when the notebook stopped being quantum-specific.
+// A saved one becomes a short text block rather than vanishing, so nothing a
+// reader wrote is lost silently; code blocks fold their old framework into a
+// language.
+function normalizeBlock(block) {
+  if (block?.type === 'circuit') {
+    return { id: block.id || newId('b'), type: 'text', markdown: `> Circuit block removed${block.name ? `: ${block.name}` : ''}` }
+  }
+  if (block?.type === 'code') return { ...block, framework: normalizeLanguage(block.framework) }
+  return block
+}
+
 function normalizeNote(note) {
   if (!note || typeof note !== 'object') return null
 
   return {
     ...note,
     title: note.title || 'Untitled note',
-    content: Array.isArray(note.content) ? note.content : [textBlock('')],
+    content: Array.isArray(note.content) ? note.content.map(normalizeBlock) : [textBlock('')],
     tags: Array.isArray(note.tags) ? note.tags : [],
     folder: note.folder || DEFAULT_FOLDER,
     pinned: Boolean(note.pinned),
@@ -361,6 +380,7 @@ function markSynced(id, syncedAt) {
 }
 
 async function remoteUpsert(note) {
+  backendPush(note) // FastAPI backend, when it is running; a no-op otherwise
   const userId = getUser()?.id
   if (!userId) return false
   try {
@@ -450,6 +470,7 @@ if (typeof document !== 'undefined') {
 // is dead", and keeping the body would leave deleted text on the server
 // indefinitely for a row the user believes they removed.
 async function remoteDelete(id) {
+  backendDelete(id)
   const userId = getUser()?.id
   // Signed out, there is nothing to mark — but the local tombstone recorded by
   // deleteNote() stays, and the first sync after signing in replays it.
@@ -730,7 +751,10 @@ export function updateNote(id, patch) {
   const next = normalizeNote({ ...existing, ...patch, id, updatedAt: Date.now() })
   const ok = writeStore({ ...store, [id]: next })
   // Debounced: this is the autosave path and runs on a keystroke cadence.
-  if (ok) scheduleRemoteUpsert(next)
+  if (ok) {
+    scheduleRemoteUpsert(next)
+    backendPushDebounced(next)
+  }
   return ok ? next : null
 }
 
@@ -874,7 +898,6 @@ function noteHaystack(note) {
   for (const b of note.content || []) {
     if (b.type === 'text') parts.push(b.markdown)
     else if (b.type === 'code') parts.push(b.code, b.framework)
-    else if (b.type === 'circuit') parts.push(b.name, b.source)
   }
   const hay = parts.join('\n').toLowerCase()
   _haystacks.set(note, hay)
@@ -947,4 +970,62 @@ export function writeCompilerDraft(draft) {
   } catch {
     /* ignore */
   }
+}
+
+// ── backend pull ──────────────────────────────────────────────────────────────
+// Write notes the FastAPI backend changed (including ones an agent created or
+// appended to) into the local store. Never pushes them back: they came from there.
+// A local note wins when it is newer, so a pull cannot undo typing.
+export function applyRemoteNotes(remoteNotes) {
+  const store = { ...readStore() }
+  let changed = 0
+  for (const remote of remoteNotes || []) {
+    const local = store[remote.id]
+    if (remote.deletedAt) {
+      if (local && (local.updatedAt || 0) <= remote.updatedAt) { delete store[remote.id]; changed += 1 }
+      continue
+    }
+    if (local && (local.updatedAt || 0) >= remote.updatedAt) continue
+    const { deletedAt: _deletedAt, ...fields } = remote
+    store[remote.id] = normalizeNote({ ...fields, syncedAt: undefined })
+    changed += 1
+  }
+  if (changed > 0 && writeStore(store)) {
+    window.dispatchEvent(new CustomEvent('nb:notes-changed'))
+    return changed
+  }
+  return 0
+}
+
+// Remove every note from this device (sign-out on a shared computer, "delete all
+// my data"). Local only: the caller decides whether the server copy goes too.
+export function clearLocalNotes() {
+  writeStore({})
+  for (const key of [TOMBSTONE_KEY, 'qcb.notebook.recent', 'qcb.notebook.snapshotDays', 'qcb.notebook.focus']) {
+    try { localStorage.removeItem(key) } catch { /* storage blocked */ }
+  }
+  window.dispatchEvent(new CustomEvent('nb:notes-changed'))
+}
+
+// The server refused these notes because it holds a newer version (they were edited
+// on another device). The server's version takes the note's place, and this device's
+// text is kept as a copy beside it, so neither side's words are lost. Returns how many
+// local notes changed.
+export function keepBothOnConflict(serverNotes) {
+  let copies = 0
+  for (const server of serverNotes || []) {
+    const local = readStore()[server.id]
+    if (!local || server.deletedAt) continue
+    if (JSON.stringify(local.content) === JSON.stringify(server.content)) continue
+    createNote({
+      title: `${local.title}${CONFLICT_SUFFIX}`,
+      content: local.content.map((b) => ({ ...b, id: newId('b') })),
+      tags: local.tags,
+      folder: local.folder,
+    })
+    copies += 1
+  }
+  const changed = applyRemoteNotes(serverNotes)
+  if (copies > 0) window.dispatchEvent(new CustomEvent('nb:conflict-copies', { detail: { count: copies } }))
+  return changed + copies
 }

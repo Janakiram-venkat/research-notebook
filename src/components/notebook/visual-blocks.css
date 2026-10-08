@@ -1,0 +1,99 @@
+/* Mind map and diagram blocks. Shares the card look of the other embedded blocks. */
+
+.nb-mindmap, .nb-diagram {
+  margin: 18px 0; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-card);
+  box-shadow: 0 1px 2px rgba(11, 15, 42, 0.04), 0 6px 20px rgba(11, 15, 42, 0.04); overflow: hidden;
+}
+.nb-mindmap.is-node-selected, .nb-diagram.is-node-selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+.nb-mm-toolbar {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 7px 10px;
+  border-bottom: 1px solid var(--border); background: var(--surface-soft);
+}
+.nb-mm-label {
+  display: inline-flex; align-items: center; gap: 6px; margin-right: 8px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+}
+.nb-mm-spacer { flex: 1; }
+.nb-mm-toolbar button {
+  display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 9px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-primary);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.nb-mm-toolbar button:hover:not(:disabled) { background: var(--bg-card); border-color: var(--border); }
+.nb-mm-toolbar button:disabled { opacity: 0.4; cursor: default; }
+.nb-mm-toolbar button[aria-pressed="true"] { background: var(--accent-dim); color: var(--accent); }
+.nb-mm-toolbar button.is-primary { background: var(--accent); color: #fff; }
+.nb-mm-toolbar button.is-primary:hover { background: var(--accent-strong); border-color: transparent; }
+.nb-mm-toolbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.nb-mm-zoom { min-width: 42px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+
+.nb-mm-keys { margin: 0; padding: 8px 12px; font-size: 12.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.nb-mm-keys kbd {
+  display: inline-block; padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--bg-card); font-family: var(--font-mono); font-size: 11px; color: var(--text-primary);
+}
+
+.nb-mm-canvas {
+  position: relative; overflow: auto; max-height: 560px; padding: 8px; outline: none;
+  background: radial-gradient(circle at 1px 1px, rgba(86, 93, 126, 0.14) 1px, transparent 0) 0 0 / 20px 20px;
+}
+.nb-mm-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-dim); }
+.nb-mm-stage { position: relative; }
+.nb-mm-svg { display: block; overflow: visible; }
+.nb-mm-node { cursor: pointer; }
+.nb-mm-node:hover > rect:not([fill="none"]) { filter: brightness(0.98) drop-shadow(0 2px 4px rgba(11, 15, 42, 0.12)); }
+.nb-mm-fold { cursor: pointer; }
+.nb-mm-input {
+  position: absolute; box-sizing: border-box; padding: 0 10px; border: 2px solid var(--accent); border-radius: 9px;
+  background: var(--mm-node); font: inherit; font-size: 13px; color: var(--text-primary); outline: none;
+  box-shadow: 0 0 0 4px var(--accent-dim), 0 6px 16px rgba(11, 15, 42, 0.12); z-index: 2;
+}
+.nb-mm-input.is-root { font-size: 14.5px; font-weight: 700; border-radius: 11px; }
+
+.nb-diagram-body { display: flex; min-height: 120px; }
+.nb-diagram.is-editing .nb-diagram-body { display: grid; grid-template-columns: minmax(260px, 2fr) 3fr; }
+.nb-diagram-editor { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--border); background: var(--surface-soft); }
+.nb-diagram-editor textarea {
+  width: 100%; box-sizing: border-box; resize: vertical; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-code, #fff); color: var(--surface-code-text, inherit); font-family: var(--font-mono); font-size: 13px; line-height: 1.55; tab-size: 2;
+}
+.nb-diagram-editor textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.nb-diagram-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+.nb-diagram-examples button {
+  height: 26px; padding: 0 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-card);
+  font: inherit; font-size: 12px; color: var(--text-primary); cursor: pointer;
+}
+.nb-diagram-examples button:hover { border-color: var(--accent); color: var(--accent); }
+.nb-diagram-examples a { margin-left: auto; color: var(--accent); }
+.nb-diagram-view { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 18px; overflow-x: auto; }
+/* Full width of the block so Mermaid's width:100% has something to fill; the
+   svg's own max-width (its natural size) stops small diagrams being blown up. */
+.nb-diagram-svg { width: 100%; display: flex; justify-content: center; }
+.nb-diagram-svg svg { height: auto; }
+.nb-diagram-status { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--text-muted); }
+.nb-diagram-error {
+  align-self: stretch; margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--danger-soft); border: 1px solid var(--danger-border);
+  color: var(--danger); font-size: 12.5px; font-family: var(--font-mono); white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  .nb-diagram.is-editing .nb-diagram-body { grid-template-columns: 1fr; }
+  .nb-diagram-editor { border-right: 0; border-bottom: 1px solid var(--border); }
+  .nb-mm-toolbar button { padding: 0 7px; }
+}
+
+@media print {
+  .nb-mm-toolbar, .nb-mm-keys { display: none; }
+  .nb-mm-canvas { max-height: none; overflow: visible; background: none; }
+}
+.nb-print-block .nb-mm-svg { max-width: 100%; height: auto; }
+
+.nb-export { position: relative; display: inline-flex; }
+.nb-export-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; display: flex; flex-direction: column; min-width: 230px;
+  padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-overlay);
+  box-shadow: 0 12px 32px rgba(11, 15, 42, 0.16);
+}
+.nb-mm-toolbar .nb-export-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; height: auto; padding: 7px 10px; text-align: left; }
+.nb-export-menu small { font-size: 11.5px; color: var(--text-muted); }

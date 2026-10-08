@@ -14,7 +14,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { TEMPLATES, STARTER_TEMPLATE_IDS, getTemplate, templateBlockTypes } from './templates.js'
+import { TEMPLATES, STARTER_TEMPLATE_IDS, WELCOME_TEMPLATE, getTemplate, templateBlockTypes } from './templates.js'
 
 describe('template roster', () => {
   it('has a unique id, a label and a description for every entry', () => {
@@ -33,7 +33,7 @@ describe('template roster', () => {
       expect(seed.content.length).toBeGreaterThan(0)
       for (const block of seed.content) {
         expect(block.id).toBeTruthy()
-        expect(['text', 'code', 'circuit']).toContain(block.type)
+        expect(['text', 'code', 'mindmap', 'diagram']).toContain(block.type)
       }
     }
   })
@@ -60,16 +60,41 @@ describe('starter templates', () => {
     }
   })
 
-  it('offers something blank, something for a lab run, and something runnable', () => {
+  it('offers something blank, something structured, and something runnable', () => {
     expect(STARTER_TEMPLATE_IDS).toEqual(['blank', 'experiment', 'scratchpad'])
     expect(templateBlockTypes(getTemplate('blank'))).toEqual(['text'])
-    expect(templateBlockTypes(getTemplate('experiment'))).toContain('circuit')
+    expect(templateBlockTypes(getTemplate('experiment'))).toContain('code')
     expect(templateBlockTypes(getTemplate('scratchpad'))).toContain('code')
   })
 })
 
 describe('templateBlockTypes', () => {
   it('reports each type once, in a fixed reading order', () => {
-    expect(templateBlockTypes(getTemplate('lab-report'))).toEqual(['text', 'code', 'circuit'])
+    expect(templateBlockTypes(getTemplate('lab-report'))).toEqual(['text', 'code'])
+  })
+})
+
+describe('welcome note', () => {
+  it('builds fresh, well-formed blocks each time and stays out of the picker', () => {
+    const a = WELCOME_TEMPLATE.build()
+    const b = WELCOME_TEMPLATE.build()
+    expect(a.title).toBeTruthy()
+    expect(a.content.some((blk) => blk.type === 'code')).toBe(true)
+    expect(a.content[0].id).not.toBe(b.content[0].id)
+    expect(TEMPLATES.some((t) => t.id === 'welcome')).toBe(false)
+  })
+})
+
+describe('visual templates', () => {
+  it('build valid mind maps and diagrams with fresh ids', () => {
+    const a = getTemplate('brainstorm').build()
+    const b = getTemplate('brainstorm').build()
+    const mapA = a.content.find((blk) => blk.type === 'mindmap')
+    const mapB = b.content.find((blk) => blk.type === 'mindmap')
+    expect(mapA.root.children.length).toBeGreaterThan(1)
+    expect(mapA.id).not.toBe(mapB.id)
+    expect(mapA.root.id).not.toBe(mapB.root.id)
+    expect(templateBlockTypes(getTemplate('process'))).toEqual(['text', 'diagram'])
+    expect(templateBlockTypes(getTemplate('concept-map'))).toEqual(['text', 'mindmap'])
   })
 })

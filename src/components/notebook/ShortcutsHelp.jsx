@@ -45,7 +45,7 @@ const GROUPS = [
     ],
   },
   {
-    title: 'Code + circuit',
+    title: 'Code',
     rows: [
       { keys: ['Ctrl', 'Enter'], label: 'Run code block' },
     ],

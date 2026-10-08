@@ -21,9 +21,9 @@ const STARTER_ICONS = {
 
 // Three things worth knowing on day one, each shown as the thing you type.
 const HINTS = [
-  { Icon: Sigma, code: '$\\ket{\\psi}$', text: 'Write math inline with $…$ and it renders as you type.' },
-  { Icon: Link2, code: '[[Superposition]]', text: 'Link one note to another. Backlinks appear at the foot of both.' },
-  { Icon: Play, code: 'Ctrl+Enter', text: 'Code blocks run real Qiskit and keep their output in the note.' },
+  { Icon: Sigma, code: '$E = mc^2$', text: 'Write math inline with $…$ and it renders as you type.' },
+  { Icon: Link2, code: '[[Another note]]', text: 'Link one note to another. Backlinks appear at the foot of both.' },
+  { Icon: Play, code: 'Ctrl+Enter', text: 'Code blocks run Python or JavaScript and keep their output in the note.' },
 ]
 
 export default function NotebookEmpty({ onStart, onBrowseTemplates }) {
@@ -32,9 +32,9 @@ export default function NotebookEmpty({ onStart, onBrowseTemplates }) {
       <span className="nb-empty-eyebrow">
         <Sparkles size={13} aria-hidden="true" /> Start here
       </span>
-      <h2 className="nb-empty-title">Create your first research note</h2>
+      <h2 className="nb-empty-title">Create your first note</h2>
       <p className="nb-empty-lead">
-        A note holds writing, math, saved circuits and runnable code in one document. Pick a starting
+        A note holds writing, math, sketches, plots and runnable code in one document. Pick a starting
         point below. You can change anything in it afterwards.
       </p>
 

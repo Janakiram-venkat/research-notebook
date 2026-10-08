@@ -83,7 +83,7 @@ export function attachmentTargets(notes) {
  * block is the moment the notebook and the workspace stop being separate
  * features: the experiment arrives ready to run instead of waiting to be pasted.
  */
-export function projectNoteSeed(project, { code, framework = 'qiskit' } = {}) {
+export function projectNoteSeed(project, { code, framework = 'python' } = {}) {
   const title = project?.title || project?.slug || 'Project'
   const slug = project?.slug
 

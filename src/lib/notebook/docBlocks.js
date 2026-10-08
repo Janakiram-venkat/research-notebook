@@ -1,8 +1,8 @@
 // Bridge between the note's stored block-array schema and the single ProseMirror
 // document the editor works on.
 //
-//   stored:  content = [ {type:'text', markdown}, {type:'code', …}, {type:'circuit', …}, … ]
-//   editor:  one doc = [ …prose nodes…, runnableCode, …prose…, circuitNode, … ]
+//   stored:  content = [ {type:'text', markdown}, {type:'code', …}, {type:'sketch', …}, … ]
+//   editor:  one doc = [ …prose nodes…, runnableCode, …prose…, sketch, … ]
 //
 // Keeping the block-array as the persisted form means search, export, templates,
 // PrintDocument, backlinks and duplicate all keep working unchanged — only the
@@ -10,7 +10,8 @@
 // @tiptap/markdown MarkdownManager (editor.storage.markdown.manager) so text runs
 // round-trip exactly as the standalone text blocks used to.
 
-import { newId, textBlock } from './notebookStore.js'
+import { newId, textBlock, normalizeLanguage } from './notebookStore.js'
+import { normalizeMindMap } from './mindmap.js'
 
 // Last-resort text extraction from ProseMirror JSON, used when markdown
 // serialization throws so the user's words survive even if the formatting can't.
@@ -33,23 +34,17 @@ export function blocksToDoc(manager, content) {
       nodes.push({
         type: 'runnableCode',
         attrs: {
-          framework: block.framework || 'qiskit',
+          framework: normalizeLanguage(block.framework),
           code: block.code || '',
           lastResult: block.lastResult || null,
         },
       })
-    } else if (block.type === 'circuit') {
-      nodes.push({
-        type: 'circuitNode',
-        attrs: {
-          format: block.format || 'qcircuit.json@1',
-          data: block.data || null,
-          source: block.source || 'manual',
-          name: block.name || '',
-        },
-      })
     } else if (block.type === 'sketch') {
       nodes.push({ type: 'sketch', attrs: { src: block.src || '' } })
+    } else if (block.type === 'mindmap') {
+      nodes.push({ type: 'mindMap', attrs: { data: normalizeMindMap(block.root) } })
+    } else if (block.type === 'diagram') {
+      nodes.push({ type: 'diagram', attrs: { code: block.code || '' } })
     } else if (block.type === 'plot') {
       nodes.push({
         type: 'dataPlot',
@@ -80,7 +75,7 @@ export function blocksToDoc(manager, content) {
 
 // Serialize the editor's doc JSON back into the stored block array. Consecutive
 // prose nodes collapse into one text block; each custom node becomes its own
-// code/circuit block. Fresh ids every call is fine — nothing keys on block-id
+// code/sketch/plot block. Fresh ids every call is fine — nothing keys on block-id
 // stability across edits.
 export function docToBlocks(manager, docJSON) {
   const blocks = []
@@ -115,20 +110,16 @@ export function docToBlocks(manager, docJSON) {
       blocks.push({
         id: newId('b'),
         type: 'code',
-        framework: node.attrs?.framework || 'qiskit',
+        framework: normalizeLanguage(node.attrs?.framework),
         code: node.attrs?.code || '',
         lastResult: node.attrs?.lastResult || null,
       })
-    } else if (node.type === 'circuitNode') {
+    } else if (node.type === 'mindMap') {
       flush()
-      blocks.push({
-        id: newId('b'),
-        type: 'circuit',
-        format: node.attrs?.format || 'qcircuit.json@1',
-        data: node.attrs?.data || null,
-        source: node.attrs?.source || 'manual',
-        name: node.attrs?.name || '',
-      })
+      blocks.push({ id: newId('b'), type: 'mindmap', root: normalizeMindMap(node.attrs?.data) })
+    } else if (node.type === 'diagram') {
+      flush()
+      blocks.push({ id: newId('b'), type: 'diagram', code: node.attrs?.code || '' })
     } else if (node.type === 'sketch') {
       flush()
       blocks.push({ id: newId('b'), type: 'sketch', src: node.attrs?.src || '' })
