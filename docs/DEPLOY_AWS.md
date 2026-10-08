@@ -71,6 +71,18 @@ git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -
 ```
 The database upgrades itself on start. Take a backup first.
 
+### Auto-deploy with GitHub Actions
+`.github/workflows/ci.yml` runs the lint, the frontend and backend tests, and a Docker smoke test on every push and pull request.
+On a push to `main` that passes, it SSHes into the server, saves `/data/pre-deploy.db`, pulls, rebuilds, and checks
+`https://DOMAIN/api/health`. One-time setup:
+1. On your machine: `ssh-keygen -t ed25519 -f deploy_key -N ""`. Append `deploy_key.pub` to `~/.ssh/authorized_keys` on the server.
+2. The code must be cloned at `~/research-notebook` on the server (step 3), with `git fetch` working (public repo, or a read-only deploy key).
+3. In GitHub → Settings → Environments, create `production` and add the secrets `SSH_HOST` (server IP), `SSH_USER` (e.g. `ubuntu`),
+   `SSH_KEY` (contents of `deploy_key`) and `DOMAIN`. Then add the repository variable `DEPLOY_ENABLED=true`.
+4. Port 22 must accept GitHub's runners. If you limit SSH to your own IP, deploys will fail; use key-only SSH with password login off instead.
+
+The deploy runs `git reset --hard origin/main` on the server, so do not edit tracked files there. `backend/.env` is git-ignored and is kept.
+
 ## Checklist before opening it to the public
 - [ ] HTTPS works, and http redirects to https
 - [ ] `NB_SECRET_KEY` set (changing it later signs everyone out)

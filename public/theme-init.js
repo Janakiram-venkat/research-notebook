@@ -5,4 +5,4 @@ try {
   var d = c === 'dark' || ((!c || c === 'system') && matchMedia('(prefers-color-scheme: dark)').matches)
   document.documentElement.dataset.theme = d ? 'dark' : 'light'
   document.documentElement.style.colorScheme = d ? 'dark' : 'light'
-} catch (e) { /* storage blocked: the app applies the theme itself on start */ }
+} catch { /* storage blocked: the app applies the theme itself on start */ }

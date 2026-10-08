@@ -2,6 +2,7 @@ node_modules
 dist
 *.log
 backend/.venv
+backend/venv
 backend/data
 backend/.env
 __pycache__
